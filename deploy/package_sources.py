@@ -16,11 +16,11 @@ with tarfile.open(output, "w:gz") as bundle:
     for repo, revision, paths, prefix in [
         (
             args.foundation,
-            "e8798f9397d6391d39d9159a801dfa5ec7908663",
+            "c98f69dd20c005ac5aa244dd03f110ddeed368dd",
             ["src", "pyproject.toml", "README.md"],
             "foundation/",
         ),
-        (".", "8c9efdd", ["examples/service-desk"], "launchpad/"),
+        (".", "2669f0d", ["examples/service-desk"], "launchpad/"),
     ]:
         raw = subprocess.check_output(["git", "-C", repo, "archive", revision, *paths])
         with tarfile.open(fileobj=io.BytesIO(raw)) as source:
