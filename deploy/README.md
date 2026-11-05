@@ -45,3 +45,7 @@ Linux/Python 3.12 설치에서는 SQLAlchemy가 greenlet 3.5.6을 추가로 선�
 종료 시에는 VM·부트 디스크, 전용 VCN·서브넷·라우팅·보안 목록·Internet Gateway, DevOps 환경·프로젝트·알림 토픽을 확인합니다. 기존 고객 자원을 이름이 비슷하다는 이유로 삭제하지 않습니다. 앱 데이터 보존 여부를 결정한 뒤 종료합니다.
 
 지원 OS 근거: [OCI DevOps 인스턴스 그룹 배포](https://docs.oracle.com/en-us/iaas/Content/devops/using/deploy_instancegroups.htm).
+
+## 변수 기반 인프라 템플릿
+
+새 환경을 반복 구성할 때는 [Terraform 템플릿](../infra/terraform/README.md)을 시작점으로 사용합니다. 필수·선택·조건부 변수를 제공하며 기본 이미지와 커스텀 이미지 모두 선택할 수 있습니다. 현재는 인프라 생성 범위이며 앱 배포·DB 초기화까지 자동화한 완성본은 아닙니다. 기존 스크립트의 실제 예제 리소스는 아직 Terraform state로 이전하지 않았습니다.

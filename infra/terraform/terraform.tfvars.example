@@ -1,0 +1,11 @@
+region = "ap-seoul-1"
+compartment_id = "<compartment OCID>"
+availability_domain = "<availability domain name>"
+image_id = "<Oracle Linux 9 x86 image OCID or compatible custom image OCID>"
+ssh_public_key = "ssh-ed25519 <public key>"
+ssh_source_cidr = "<your public IPv4>/32"
+name = "oci-agent-launchpad-dev"
+enable_memory = true
+adb_admin_secret_id = "<existing OCI Vault secret OCID>"
+# Optional: vm_ocpus=1, vm_memory_gb=8, adb_ecpus=2, adb_storage_gb=20
+# Prebuilt custom image: bootstrap_packages=[]
