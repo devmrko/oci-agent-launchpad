@@ -1,3 +1,17 @@
+# 현재 상태 — Companion 배포·복구 연결
+
+2026-11-06: Companion의 배포 화면에서 서울 예제 VM의 OCI DevOps 파이프라인을 실행했습니다. 0.4.0 → 0.3.0 복구는 OCI `SUCCEEDED`와 Companion의 `UP · 0.3.0`을 확인했고, 화면에서 시작한 0.4.0 재배포도 OCI API `SUCCEEDED`와 실제 VM health `UP · 0.4.0`을 확인했습니다. 최종 브라우저 재확인은 Edge의 다른 확장 UI가 자동화를 차단하여 진행하지 못했습니다.
+
+서비스명·릴리스 루트·포트·기대 버전·상태 확인 제한 시간은 환경별 JSON으로 지정합니다. 릴리스 전환 실패 시 직전 systemd 설정과 앱 버전을 복구하며, ADB 메모리와 SQLite 데이터는 변경하지 않습니다. 자동 실패 복구는 로컬 실패 주입 테스트, 버전 왕복 전환은 실제 VM과 DevOps로 검증했습니다.
+
+Companion 기능 브랜치 `feature/agent-operations`의 `3c91a66` 기준 전체 테스트 108개, Launchpad 배포 테스트 14개 및 하위 검사 3개가 통과했습니다. 최종 Companion 빌드는 로컬 8091 포트에서 실행 중입니다. [배포·복구 사용법과 변수](../deploy/RELEASES.md)를 참고하세요.
+
+현재 완료 범위는 **이미 설치된 릴리스의 활성화·복구**입니다. 패키지의 Artifact Registry 전송·검증·설치와 Terraform 기반 전체 DevOps/IAM/VM 초기화는 남아 있습니다. AgentCore 주요 기능 전체의 대체가 완료된 것은 아닙니다.
+
+아래는 이전 버전 검증 이력입니다.
+
+---
+
 # 채팅 기억 연결 — 0.4.0
 
 2026-11-06: 채팅에서 명시적으로 요청한 기억을 Oracle Agent Memory에 저장하고 다른 세션에서 조회하는 흐름을 실제 OCI에서 검증했습니다. 자동 테스트 14개 통과, Companion 화면 UP·기억 도구 성공 확인. 사용법은 [Oracle 기억 가이드](oracle-agent-memory.md)를 참고하세요. 일반 질문에 대한 자동 기억 추출·답변 개인화는 아직 없습니다.

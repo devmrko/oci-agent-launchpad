@@ -1,0 +1,10 @@
+{
+  "service": "launchpad-demo",
+  "release_root": "/opt/launchpad/releases",
+  "port": 8092,
+  "health_timeout_seconds": 45,
+  "releases": {
+    "memory-0.4.0": {"directory": "memory-0.4.0", "version": "0.4.0"},
+    "memory-0.3.0": {"directory": "memory-0.3.0", "version": "0.3.0"}
+  }
+}
