@@ -1,0 +1,170 @@
+import hashlib
+import json
+import time
+import uuid
+
+from python_foundation.database import SqlAlchemyUnitOfWork
+from python_foundation.errors import BusinessError, ErrorCategory, ErrorSpec
+from sqlalchemy.exc import IntegrityError
+
+from .models import Record
+from .repository import DeskRepository
+
+DOCS = [
+    {
+        "id": "POL-VPN-01",
+        "keywords": ["vpn", "접속"],
+        "en": "[Synthetic policy] VPN requires MFA enrollment. Report connection failures to IT support.",
+        "text": "[합성 규정] VPN은 MFA 등록 후 사용합니다. 접속 장애는 IT 지원 요청으로 접수합니다.",
+    },
+    {
+        "id": "POL-LAPTOP-01",
+        "keywords": ["노트북", "장비", "laptop"],
+        "en": "[Synthetic policy] Laptop replacement requires manager approval before contacting IT support.",
+        "text": "[합성 규정] 노트북 교체는 팀장 승인 후 IT 지원팀에 요청합니다.",
+    },
+]
+
+
+class DeskService:
+    def __init__(self, factory, planner=None):
+        self.factory = factory
+        self.planner = planner
+
+    @staticmethod
+    def owner(actor):
+        return hashlib.sha256(json.dumps([actor.issuer, actor.subject]).encode()).hexdigest()
+
+    def new_session(self, actor):
+        key = str(uuid.uuid4())
+        with SqlAlchemyUnitOfWork(self.factory) as u:
+            DeskRepository(u.session).add(key, self.owner(actor), "session", {"turns": 0})
+        return {"session_id": key}
+
+    def chat(self, actor, session_id, message, correlation):
+        start = time.perf_counter()
+        owner = self.owner(actor)
+        with SqlAlchemyUnitOfWork(self.factory) as u:
+            DeskRepository(u.session).get(session_id, owner, "session")
+        lowered = message.lower()
+        action = "search"
+        mode = "deterministic-demo"
+        if self.planner:
+            action = self.planner(message)
+            mode = "live-model"
+        elif any(word in lowered for word in ("요청", "등록", "접수")):
+            action = "propose"
+        if not isinstance(action, str) or action not in {"search", "propose"}:
+            raise BusinessError(
+                ErrorSpec("INVALID_PLAN", ErrorCategory.VALIDATION, "허용되지 않은 도구입니다.")
+            )
+        hits = [d for d in DOCS if any(k in lowered for k in d["keywords"])]
+        language = self.preference(actor)["language"] or "ko"
+        answer = "\n".join(d["en" if language == "en" else "text"] for d in hits) or (
+            "No supporting policy was found."
+            if language == "en"
+            else "등록된 규정에서 근거를 찾지 못했습니다."
+        )
+        proposal = None
+        with SqlAlchemyUnitOfWork(self.factory) as u:
+            repo = DeskRepository(u.session)
+            session = repo.get(session_id, owner, "session")
+            session.data = {"turns": session.data["turns"] + 1}
+            if action == "propose":
+                proposal = str(uuid.uuid4())
+                repo.add(proposal, owner, "proposal", {"summary": message, "session_id": session_id})
+                answer += (
+                    "\nReview and approve the draft support request."
+                    if language == "en"
+                    else "\n지원 요청 초안을 만들었습니다. 내용을 확인한 뒤 승인해 주세요."
+                )
+            trace = {
+                "request_id": correlation,
+                "session_id": session_id,
+                "mode": mode,
+                "steps": [
+                    "session-owner-check",
+                    "model-plan" if self.planner else "demo-route",
+                    "policy-allow",
+                    action,
+                ],
+                "status": "ok",
+                "elapsed_ms": round((time.perf_counter() - start) * 1000, 2),
+                "app_version": "0.1.0",
+            }
+            repo.add(str(uuid.uuid4()), owner, "trace", trace)
+        return {
+            "answer": answer,
+            "language": language,
+            "sources": [d["id"] for d in hits],
+            "proposal_id": proposal,
+            "proposal_summary": message if proposal else None,
+            "trace": trace,
+        }
+
+    def approve(self, actor, proposal_id):
+        actor.require("SCOPE_requests:write")
+        owner = self.owner(actor)
+        key = "ticket:" + proposal_id
+        try:
+            with SqlAlchemyUnitOfWork(self.factory) as u:
+                repo = DeskRepository(u.session)
+                proposal = repo.get(proposal_id, owner, "proposal")
+                existing = u.session.get(Record, key)
+                if existing:
+                    return {"ticket_id": key, **existing.data}
+                data = {"summary": proposal.data["summary"], "status": "registered", "synthetic": True}
+                repo.add(key, owner, "ticket", data)
+                return {"ticket_id": key, **data}
+        except IntegrityError:
+            with SqlAlchemyUnitOfWork(self.factory) as u:
+                row = DeskRepository(u.session).get(key, owner, "ticket")
+                return {"ticket_id": key, **row.data}
+
+    def listing(self, actor, kind):
+        with SqlAlchemyUnitOfWork(self.factory) as u:
+            return [{"id": r.id, **r.data} for r in DeskRepository(u.session).list(self.owner(actor), kind)]
+
+    def preference(self, actor, value=None, delete=False):
+        owner = self.owner(actor)
+        key = "language:" + owner
+        with SqlAlchemyUnitOfWork(self.factory) as u:
+            row = u.session.get(Record, key)
+            if delete:
+                if row:
+                    u.session.delete(row)
+                return {"language": None}
+            if value is not None:
+                if row:
+                    row.data = {"language": value}
+                else:
+                    row = DeskRepository(u.session).add(key, owner, "preference", {"language": value})
+            return row.data if row else {"language": None}
+
+    def observed(self, actor, correlation, operation, call):
+        start = time.perf_counter()
+        try:
+            result = call()
+        except Exception as failure:
+            code = failure.error.code if isinstance(failure, BusinessError) else type(failure).__name__
+            self.audit(actor, correlation, operation, "error", code, start)
+            raise
+        if operation != "chat":
+            self.audit(actor, correlation, operation, "ok", None, start)
+        return result
+
+    def audit(self, actor, correlation, operation, status, error_code, start):
+        with SqlAlchemyUnitOfWork(self.factory) as u:
+            DeskRepository(u.session).add(
+                str(uuid.uuid4()),
+                self.owner(actor),
+                "trace",
+                {
+                    "request_id": correlation,
+                    "operation": operation,
+                    "status": status,
+                    "error_code": error_code,
+                    "elapsed_ms": round((time.perf_counter() - start) * 1000, 2),
+                    "app_version": "0.1.0",
+                },
+            )
