@@ -1,0 +1,10 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+.oci/
+*.pem
+*.key
+*.tfstate
+*.tfstate.*
+.terraform/
