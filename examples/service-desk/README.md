@@ -66,3 +66,7 @@ Foundation 0.1.1의 공통 ToolGateway가 입력 스키마·권한·자원 정�
 OCI 모델은 `DESK_MODEL_BACKEND=oci`, `DESK_OCI_REGION`, `DESK_OCI_COMPARTMENT`, `DESK_MODEL_NAME`으로 설정합니다. VM은 `DESK_OCI_AUTH=instance`, 로컬 검증은 `config`를 사용합니다. 모델은 검색 또는 초안 생성만 선택하고 승인 권한은 갖지 않습니다. 원격 API 호출 제한시간 25초, 출력 128토큰, 자동 재시도 없음입니다.
 
 실제 모델 호출 경로는 애슈번입니다. 서울 Flash Lite와 Flash의 활성 목록을 확인했으나 실제 공급자 호출은 실패했고, 애슈번 Flash Lite 합성 질문은 성공했습니다. VM·SQLite는 서울입니다. `trace.model`에 모델·리전·토큰·지연을 표시하고 `trace.tools`에 공통 도구 실행 단계를 표시합니다. 실제 사용자 로그인·비용 계산·MCP·긴 작업·sandbox·브라우저는 이 버전의 완료 범위가 아닙니다.
+
+## Oracle Agent Memory (0.3.0)
+
+새 ADB를 사용하는 선택 기능입니다. [구성·API·실제 검증](../../docs/oracle-agent-memory.md)을 참고하세요. `requirements-memory.lock`은 VM에서 검증된 전체 의존성입니다. 일반 데모의 언어 설정과 장기 기억 API는 별개이며, 자동 추출·채팅 자동 주입은 아직 제공하지 않습니다.

@@ -210,7 +210,7 @@ class DeskService:
                 ],
                 "status": "ok",
                 "elapsed_ms": round((time.perf_counter() - start) * 1000, 2),
-                "app_version": "0.2.0",
+                "app_version": "0.3.0",
             }
         return {
             "answer": answer,
@@ -273,6 +273,48 @@ class DeskService:
                     "status": status,
                     "error_code": error_code,
                     "elapsed_ms": round((time.perf_counter() - start) * 1000, 2),
-                    "app_version": "0.2.0",
+                    "app_version": "0.3.0",
                 },
             )
+
+    def durable_memory(self, actor, command, correlation, save=False):
+        start = time.perf_counter()
+        operation = "memory-save" if save else "memory-search"
+        try:
+            if self.memory_store is None:
+                raise BusinessError(
+                    ErrorSpec(
+                        "MEMORY_NOT_CONFIGURED",
+                        ErrorCategory.UNAVAILABLE,
+                        "장기 기억 저장소가 설정되지 않았습니다.",
+                    )
+                )
+            result = (
+                self.memory_store.save(actor, command) if save else self.memory_store.search(actor, command)
+            )
+        except Exception as failure:
+            code = failure.error.code if isinstance(failure, BusinessError) else "MEMORY_FAILED"
+            self.audit(
+                actor,
+                correlation,
+                operation,
+                "error",
+                code,
+                start,
+                extra={"tools": [{"tool": operation, "stage": "execute", "status": "error"}]},
+            )
+            raise
+        count = 1 if save else len(result)
+        self.audit(
+            actor,
+            correlation,
+            operation,
+            "ok",
+            None,
+            start,
+            extra={
+                "memory": {"backend": "oracle-agent-memory", "count": count},
+                "tools": [{"tool": operation, "stage": "execute", "status": "ok"}],
+            },
+        )
+        return {"backend": "oracle-agent-memory", "items": [result] if save else result}

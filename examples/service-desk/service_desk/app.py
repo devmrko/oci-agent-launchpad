@@ -7,6 +7,7 @@ from typing import Annotated, Literal
 import httpx
 from fastapi import Depends, FastAPI, Request
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
+from python_foundation.agent_memory import MemoryInput, MemoryQuery
 from python_foundation.database import create_database, sessions
 from python_foundation.errors import AuthenticationRequired, BusinessError, ErrorCategory, ErrorSpec
 from python_foundation.security import Actor, Security, current_actor
@@ -77,7 +78,7 @@ def model_planner(message):
         ) from failure
 
 
-def create_app(*, database_url=None, accounts=None, planner=None):
+def create_app(*, database_url=None, accounts=None, planner=None, memory_store=None):
     mode = os.environ.get("DESK_AUTH_MODE", "demo")
     if accounts is not None or mode == "demo":
         settings = FoundationSettings(
@@ -111,16 +112,27 @@ def create_app(*, database_url=None, accounts=None, planner=None):
         )
     elif backend not in {"demo", "http", "oci"}:
         raise ValueError("Unsupported DESK_MODEL_BACKEND")
+    memory_pool = memory_client = None
+    if memory_store is None and os.environ.get("DESK_MEMORY_CONFIG"):
+        from .memory_backend import resources
+
+        memory_store, memory_pool, memory_client = resources()
     service = DeskService(
         sessions(engine), planner=planner or (model_planner if os.environ.get("DESK_MODEL_URL") else None)
     )
+
+    service.memory_store = memory_store
 
     @asynccontextmanager
     async def lifespan(app):
         yield
         engine.dispose()
+        if memory_client is not None:
+            memory_client.close()
+        if memory_pool is not None:
+            memory_pool.close()
 
-    app = FastAPI(title="Service Desk — synthetic example", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(title="Service Desk — synthetic example", version="0.3.0", lifespan=lifespan)
     install_web(app, Security(settings, verifier=verifier))
     app.state.desk = service
     actor_type = Annotated[Actor, Depends(current_actor)]
@@ -131,7 +143,7 @@ def create_app(*, database_url=None, accounts=None, planner=None):
 
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
-        return {"status": "UP", "version": "0.2.0", "synthetic": True}
+        return {"status": "UP", "version": "0.3.0", "synthetic": True}
 
     @app.post("/api/sessions")
     def new_session(actor: actor_type):
@@ -156,6 +168,14 @@ def create_app(*, database_url=None, accounts=None, planner=None):
     @app.get("/api/traces")
     def traces(actor: actor_type):
         return service.listing(actor, "trace")
+
+    @app.post("/api/memories")
+    def save_durable_memory(body: MemoryInput, actor: actor_type, request: Request):
+        return service.durable_memory(actor, body, request.state.request_id, save=True)
+
+    @app.post("/api/memories/search")
+    def search_durable_memory(body: MemoryQuery, actor: actor_type, request: Request):
+        return service.durable_memory(actor, body, request.state.request_id)
 
     @app.get("/api/memory")
     def memory(actor: actor_type):

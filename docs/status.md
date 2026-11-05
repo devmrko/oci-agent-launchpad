@@ -1,3 +1,11 @@
+# 현재 상태 — Oracle Agent Memory 연결
+
+2026-11-06: 서울 Joungmin.Ko에 새 ADB `oci-agent-launchpad-memory`를 생성하고 서비스 데스크 0.3.0에 Oracle Agent Memory 26.8.0을 연결했습니다. 실제 저장·의미 검색·사용자 격리·앱 재시작 후 복원·원문 없는 실행 추적을 검증했습니다. Foundation 38개, 예제 13개 테스트와 현재 wheel 설치 검증을 통과했습니다.
+
+[Oracle 메모리 구성·사용 방법](oracle-agent-memory.md)을 참고하세요. 기억은 별도 API로 명시적으로 저장·검색하며, 채팅 자동 주입·자동 추출은 미구현입니다. 아래 0.2.0 표는 이전 검증 기준입니다. 전체 AgentCore 대체 플랫폼과 Companion 배포 실행은 여전히 완료되지 않았습니다.
+
+---
+
 # OCI에서 에이전트를 실행하고 Companion으로 확인하기
 
 고객 유스케이스를 AI-DLC 템플릿으로 구체화하고, Python Foundation의 공통 실행 기능을 사용하는 에이전트를 OCI에 배포하는 프로젝트입니다. 현재 서비스 데스크 예제로 실제 모델 호출과 승인 흐름을 확인할 수 있습니다. AgentCore 주요 기능을 대체하는 전체 플랫폼은 아직 완성되지 않았습니다.

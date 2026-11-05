@@ -4,12 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "launchpad-service-desk"
-version = "0.2.0"
+version = "0.3.0"
 requires-python = ">=3.12"
-dependencies = ["devmrko-python-foundation==0.1.1"]
+dependencies = ["devmrko-python-foundation==0.1.2"]
 
 [project.optional-dependencies]
-oci = ["oci==2.180.0"]
+oci = ["oci==2.188.0"]
+
+memory = ["oracleagentmemory==26.8.0", "oci==2.188.0"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
