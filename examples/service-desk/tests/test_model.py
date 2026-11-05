@@ -65,6 +65,8 @@ def test_real_adapter_contract_and_gateway_events(tmp_path):
             "search",
             "propose",
             "approve",
+            "memory-save",
+            "memory-search",
         }
 
 

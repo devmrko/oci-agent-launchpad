@@ -70,3 +70,7 @@ OCI 모델은 `DESK_MODEL_BACKEND=oci`, `DESK_OCI_REGION`, `DESK_OCI_COMPARTMENT
 ## Oracle Agent Memory (0.3.0)
 
 새 ADB를 사용하는 선택 기능입니다. [구성·API·실제 검증](../../docs/oracle-agent-memory.md)을 참고하세요. `requirements-memory.lock`은 VM에서 검증된 전체 의존성입니다. 일반 데모의 언어 설정과 장기 기억 API는 별개이며, 자동 추출·채팅 자동 주입은 아직 제공하지 않습니다.
+
+## 채팅 기억 (0.4.0)
+
+`기억해 주세요: …`로 저장하고 `기억에서 찾아 주세요: …`로 다른 세션에서도 조회합니다. 기억은 출처 ID와 함께 표시되며 업무 실행 지시로 처리하지 않습니다. 일반 대화 자동 저장·개인화는 아직 없습니다. 실제 OCI 검증 스크립트는 `scripts/smoke_memory_chat.py`입니다.

@@ -1,3 +1,11 @@
+# 채팅 기억 연결 — 0.4.0
+
+2026-11-06: 채팅에서 명시적으로 요청한 기억을 Oracle Agent Memory에 저장하고 다른 세션에서 조회하는 흐름을 실제 OCI에서 검증했습니다. 자동 테스트 14개 통과, Companion 화면 UP·기억 도구 성공 확인. 사용법은 [Oracle 기억 가이드](oracle-agent-memory.md)를 참고하세요. 일반 질문에 대한 자동 기억 추출·답변 개인화는 아직 없습니다.
+
+아래는 이전 버전의 검증 이력입니다.
+
+---
+
 # 현재 상태 — Oracle Agent Memory 연결
 
 2026-11-06: 서울 Joungmin.Ko에 새 ADB `oci-agent-launchpad-memory`를 생성하고 서비스 데스크 0.3.0에 Oracle Agent Memory 26.8.0을 연결했습니다. 실제 저장·의미 검색·사용자 격리·앱 재시작 후 복원·원문 없는 실행 추적을 검증했습니다. Foundation 38개, 예제 13개 테스트와 현재 wheel 설치 검증을 통과했습니다.
