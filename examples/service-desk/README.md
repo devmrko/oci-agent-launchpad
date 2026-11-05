@@ -48,7 +48,7 @@ PYTHON=python3.14 bash scripts/setup.sh /원하는/경로/python-foundation
 | DESK_MODEL_URL / KEY / NAME | 실제 모델 사용 시 모두 필수 | HTTPS OpenAI 호환 chat completions URL, API 키, 모델 이름 |
 | Foundation 인증 설정 | jwt일 때 필수 | 고정 Foundation의 issuer/audience/jwks_url 설정 규약 참조 |
 
-실제 모델은 search/propose 선택만 제안합니다. 서버가 허용 목록과 승인·소유권을 검사하며 모델이 접수를 직접 실행하지 않습니다. 실제 모델 연결, JWT 공급자 연결, SQLite 외 DB, 클라우드 배포는 아직 검증하지 않았습니다. 모델 옵션은 로컬 스크립트 실행 전에 환경변수로 공급할 수 있습니다.
+실제 모델은 search/propose 선택만 제안합니다. 서버가 허용 목록과 승인·소유권을 검사하며 모델이 접수를 직접 실행하지 않습니다. 실제 모델 연결, JWT 공급자 연결, SQLite 외 DB는 아직 검증하지 않았습니다. [Oracle Linux VM 배포·원격 시험](../../deploy/README.md)은 완료했습니다. 모델 옵션은 로컬 스크립트 실행 전에 환경변수로 공급할 수 있습니다.
 
 현재 자동 테이블 생성은 개발 편의를 위한 것입니다. 운영 전에는 마이그레이션, 보관·삭제 정책, TLS, 운영 인증, 페이지별 조회 제한, 관측 백엔드와 복구 절차를 갖춰야 합니다. 코드 실행 sandbox·브라우저·MCP Gateway는 구현하지 않았습니다.
 

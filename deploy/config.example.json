@@ -1,0 +1,10 @@
+{
+  "name": "oci-agent-launchpad-demo",
+  "profile": "DEFAULT",
+  "region": "ap-seoul-1",
+  "compartment_id": "<Joungmin.Ko compartment OCID>",
+  "availability_domain": "<availability domain>",
+  "image_id": "<Oracle Linux 9 x86 image OCID>",
+  "ssh_source_cidr": "<your-current-public-IP>/32",
+  "ssh_public_key": ".run/oci-launchpad/id_ed25519.pub"
+}

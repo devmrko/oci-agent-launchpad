@@ -4,8 +4,9 @@
 
 고객의 업무 문제를 출발점으로 AI 에이전트를 함께 만들고 OCI 배포와 상용 운영으로 연결하기 위한 기획 자료입니다. 대상 독자는 현장 Customer Engineer(CE), 아키텍트, 플랫폼 담당자와 프로그램 책임자입니다.
 
-현재는 **계획과 첫 실행 예제** 단계입니다. Python Foundation 기반 사내 안내·요청 접수 예제를 구현했으며, 로컬 검증을 진행했습니다. OCI Companion 설치·연결은 확인했지만 실제 클라우드 배포와 전체 플랫폼 구현은 아직 완료하지 않았습니다.
+현재는 **계획과 첫 실행 예제** 단계입니다. Python Foundation 기반 사내 안내·요청 접수 예제를 구현했으며, 로컬 검증을 진행했습니다. 서울 리전의 새 Oracle Linux VM에 SSH로 배포하고 원격 검증까지 마쳤습니다. OCI Companion용 DevOps 환경은 준비했으며 Companion의 배포 실행·앱 모니터링 연결과 전체 플랫폼 구현은 남아 있습니다.
 
+- [OCI 배포 결과와 접속 절차](deploy/README.md): 새 VM, 원격 검증, Companion 연동 상태입니다.
 - [첫 예제 실행](examples/service-desk/README.md): 규정 조회, 승인 후 접수, 기억과 실행 추적을 확인합니다.
 - [상세 고객 양식](templates/use-case.md): 필수·옵션·조건부 입력과 요구·설계·배포·검증 표를 제공합니다.
 
