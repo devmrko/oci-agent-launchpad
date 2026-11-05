@@ -14,6 +14,7 @@ from python_foundation.settings import FoundationSettings
 from python_foundation.web import install_web
 
 from .models import Base
+from .planning import OciPlanner
 from .service import DeskService
 
 
@@ -100,6 +101,16 @@ def create_app(*, database_url=None, accounts=None, planner=None):
         raise ValueError("DESK_AUTH_MODE must be demo or jwt")
     engine = create_database(settings)
     Base.metadata.create_all(engine)
+    backend = os.environ.get("DESK_MODEL_BACKEND", "http" if os.environ.get("DESK_MODEL_URL") else "demo")
+    if planner is None and backend == "oci":
+        planner = OciPlanner(
+            region=os.environ["DESK_OCI_REGION"],
+            compartment=os.environ["DESK_OCI_COMPARTMENT"],
+            model=os.environ.get("DESK_MODEL_NAME", "google.gemini-2.5-flash-lite"),
+            auth=os.environ.get("DESK_OCI_AUTH", "instance"),
+        )
+    elif backend not in {"demo", "http", "oci"}:
+        raise ValueError("Unsupported DESK_MODEL_BACKEND")
     service = DeskService(
         sessions(engine), planner=planner or (model_planner if os.environ.get("DESK_MODEL_URL") else None)
     )
@@ -109,7 +120,7 @@ def create_app(*, database_url=None, accounts=None, planner=None):
         yield
         engine.dispose()
 
-    app = FastAPI(title="Service Desk — synthetic example", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="Service Desk — synthetic example", version="0.2.0", lifespan=lifespan)
     install_web(app, Security(settings, verifier=verifier))
     app.state.desk = service
     actor_type = Annotated[Actor, Depends(current_actor)]
@@ -120,7 +131,7 @@ def create_app(*, database_url=None, accounts=None, planner=None):
 
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
-        return {"status": "UP", "version": "0.1.0", "synthetic": True}
+        return {"status": "UP", "version": "0.2.0", "synthetic": True}
 
     @app.post("/api/sessions")
     def new_session(actor: actor_type):
@@ -128,18 +139,15 @@ def create_app(*, database_url=None, accounts=None, planner=None):
 
     @app.post("/api/chat")
     def chat(body: Chat, actor: actor_type, request: Request):
-        return service.observed(
-            actor,
-            request.state.request_id,
-            "chat",
-            lambda: service.chat(actor, body.session_id, body.message, request.state.request_id),
-        )
+        return service.chat(actor, body.session_id, body.message, request.state.request_id)
 
     @app.post("/api/proposals/{proposal_id}/approve")
     def approve(proposal_id: str, body: Approval, actor: actor_type, request: Request):
-        return service.observed(
-            actor, request.state.request_id, "approve", lambda: service.approve(actor, proposal_id)
-        )
+        return service.approve(actor, proposal_id, request.state.request_id)
+
+    @app.get("/api/tools")
+    def tool_catalog(actor: actor_type):
+        return service.gateway("catalog", "none").catalog()
 
     @app.get("/api/tickets")
     def tickets(actor: actor_type):

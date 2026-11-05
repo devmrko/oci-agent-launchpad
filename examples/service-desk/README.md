@@ -10,7 +10,7 @@ Python 3.12 이상과 고정 버전의 python-foundation 소스가 필요합니�
 
 ```bash
 git clone https://github.com/devmrko/python-foundation.git /원하는/경로/python-foundation
-git -C /원하는/경로/python-foundation checkout e8798f9397d6391d39d9159a801dfa5ec7908663
+git -C /원하는/경로/python-foundation checkout c98f69dd20c005ac5aa244dd03f110ddeed368dd
 cd examples/service-desk
 PYTHON=python3.14 bash scripts/setup.sh /원하는/경로/python-foundation
 .venv/bin/python scripts/run_demo.py
@@ -58,3 +58,11 @@ PYTHON=python3.14 bash scripts/setup.sh /원하는/경로/python-foundation
 - [고객에게 작성받을 상세 양식](../../templates/use-case.md)
 - [Companion 연결과 배포 준비](../../docs/companion-integration-plan.md)
 - [검증 기록](aidlc/verification.md)
+
+## 0.2 실제 모델과 공통 Gateway
+
+Foundation 0.1.1의 공통 ToolGateway가 입력 스키마·권한·자원 정책·실행 예산과 도구 이벤트를 처리합니다. `GET /api/tools`로 도구 명세를 조회합니다. 이 기능은 인프로세스 Gateway이며 네트워크 MCP 서버는 아닙니다.
+
+OCI 모델은 `DESK_MODEL_BACKEND=oci`, `DESK_OCI_REGION`, `DESK_OCI_COMPARTMENT`, `DESK_MODEL_NAME`으로 설정합니다. VM은 `DESK_OCI_AUTH=instance`, 로컬 검증은 `config`를 사용합니다. 모델은 검색 또는 초안 생성만 선택하고 승인 권한은 갖지 않습니다. 원격 API 호출 제한시간 25초, 출력 128토큰, 자동 재시도 없음입니다.
+
+실제 모델 호출 경로는 애슈번입니다. 서울 Flash Lite와 Flash의 활성 목록을 확인했으나 실제 공급자 호출은 실패했고, 애슈번 Flash Lite 합성 질문은 성공했습니다. VM·SQLite는 서울입니다. `trace.model`에 모델·리전·토큰·지연을 표시하고 `trace.tools`에 공통 도구 실행 단계를 표시합니다. 실제 사용자 로그인·비용 계산·MCP·긴 작업·sandbox·브라우저는 이 버전의 완료 범위가 아닙니다.

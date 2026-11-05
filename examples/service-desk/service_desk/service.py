@@ -2,12 +2,16 @@ import hashlib
 import json
 import time
 import uuid
+from dataclasses import asdict
 
+from pydantic import BaseModel, ConfigDict, Field
+from python_foundation.agents import ExecutionContext, ToolDefinition, ToolGateway
 from python_foundation.database import SqlAlchemyUnitOfWork
 from python_foundation.errors import BusinessError, ErrorCategory, ErrorSpec
 from sqlalchemy.exc import IntegrityError
 
 from .models import Record
+from .planning import Decision
 from .repository import DeskRepository
 
 DOCS = [
@@ -26,6 +30,21 @@ DOCS = [
 ]
 
 
+class ChatToolInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    session_id: str = Field(min_length=1, max_length=100)
+    message: str = Field(min_length=1, max_length=2000)
+
+
+class ApprovalToolInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    proposal_id: str = Field(min_length=1, max_length=100)
+
+
+class ToolOutput(BaseModel):
+    data: dict
+
+
 class DeskService:
     def __init__(self, factory, planner=None):
         self.factory = factory
@@ -41,23 +60,124 @@ class DeskService:
             DeskRepository(u.session).add(key, self.owner(actor), "session", {"turns": 0})
         return {"session_id": key}
 
+    def _authorize_chat(self, actor, body):
+        with SqlAlchemyUnitOfWork(self.factory) as u:
+            DeskRepository(u.session).get(body.session_id, self.owner(actor), "session")
+
+    def _authorize_approval(self, actor, body):
+        with SqlAlchemyUnitOfWork(self.factory) as u:
+            DeskRepository(u.session).get(body.proposal_id, self.owner(actor), "proposal")
+
+    def gateway(self, correlation, mode):
+        return ToolGateway(
+            [
+                ToolDefinition(
+                    "search",
+                    "Search approved synthetic policies",
+                    ChatToolInput,
+                    self._authorize_chat,
+                    lambda a, b: ToolOutput(data=self._chat_action(a, b, "search", correlation, mode)),
+                ),
+                ToolDefinition(
+                    "propose",
+                    "Create a draft support request; does not submit it",
+                    ChatToolInput,
+                    self._authorize_chat,
+                    lambda a, b: ToolOutput(data=self._chat_action(a, b, "propose", correlation, mode)),
+                ),
+                ToolDefinition(
+                    "approve",
+                    "Submit an existing user-approved draft",
+                    ApprovalToolInput,
+                    self._authorize_approval,
+                    lambda a, b: ToolOutput(data=self._approve(a, b.proposal_id)),
+                    required_authority="SCOPE_requests:write",
+                ),
+            ]
+        )
+
     def chat(self, actor, session_id, message, correlation):
         start = time.perf_counter()
-        owner = self.owner(actor)
-        with SqlAlchemyUnitOfWork(self.factory) as u:
-            DeskRepository(u.session).get(session_id, owner, "session")
-        lowered = message.lower()
-        action = "search"
-        mode = "deterministic-demo"
-        if self.planner:
-            action = self.planner(message)
-            mode = "live-model"
-        elif any(word in lowered for word in ("요청", "등록", "접수")):
-            action = "propose"
-        if not isinstance(action, str) or action not in {"search", "propose"}:
-            raise BusinessError(
-                ErrorSpec("INVALID_PLAN", ErrorCategory.VALIDATION, "허용되지 않은 도구입니다.")
+        context = ExecutionContext(correlation, max_calls=1, timeout_seconds=30)
+        metadata = {}
+        try:
+            # Ownership is checked before a prompt can be sent to the provider.
+            body = ChatToolInput(session_id=session_id, message=message)
+            self._authorize_chat(actor, body)
+            mode = "live-model" if self.planner else "deterministic-demo"
+            selected = (
+                self.planner(message)
+                if self.planner
+                else ("propose" if any(w in message.lower() for w in ("요청", "등록", "접수")) else "search")
             )
+            if isinstance(selected, Decision):
+                action, metadata = selected.action, selected.metadata
+            else:
+                action = selected
+            if not isinstance(action, str) or action not in {"search", "propose"}:
+                raise BusinessError(
+                    ErrorSpec("INVALID_PLAN", ErrorCategory.VALIDATION, "허용되지 않은 도구입니다.")
+                )
+            result = self.gateway(correlation, mode).invoke(context, actor, action, body.model_dump()).data
+            result["trace"].update(
+                model=metadata,
+                tools=[asdict(e) for e in context.events],
+                elapsed_ms=round((time.perf_counter() - start) * 1000, 2),
+            )
+            with SqlAlchemyUnitOfWork(self.factory) as u:
+                DeskRepository(u.session).add(str(uuid.uuid4()), self.owner(actor), "trace", result["trace"])
+            return result
+        except Exception as failure:
+            code = failure.error.code if isinstance(failure, BusinessError) else type(failure).__name__
+            self.audit(
+                actor,
+                correlation,
+                "chat",
+                "error",
+                code,
+                start,
+                extra={"model": metadata, "tools": [asdict(e) for e in context.events]},
+            )
+            raise
+
+    def approve(self, actor, proposal_id, correlation=None):
+        correlation = correlation or str(uuid.uuid4())
+        context = ExecutionContext(correlation, max_calls=1)
+        start = time.perf_counter()
+        try:
+            result = (
+                self.gateway(correlation, "user-approval")
+                .invoke(context, actor, "approve", {"proposal_id": proposal_id})
+                .data
+            )
+        except Exception as failure:
+            code = failure.error.code if isinstance(failure, BusinessError) else type(failure).__name__
+            self.audit(
+                actor,
+                correlation,
+                "approve",
+                "error",
+                code,
+                start,
+                extra={"tools": [asdict(e) for e in context.events]},
+            )
+            raise
+        self.audit(
+            actor,
+            correlation,
+            "approve",
+            "ok",
+            None,
+            start,
+            extra={"tools": [asdict(e) for e in context.events]},
+        )
+        return result
+
+    def _chat_action(self, actor, body, action, correlation, mode):
+        start = time.perf_counter()
+        session_id, message = body.session_id, body.message
+        owner = self.owner(actor)
+        lowered = message.lower()
         hits = [d for d in DOCS if any(k in lowered for k in d["keywords"])]
         language = self.preference(actor)["language"] or "ko"
         answer = "\n".join(d["en" if language == "en" else "text"] for d in hits) or (
@@ -90,9 +210,8 @@ class DeskService:
                 ],
                 "status": "ok",
                 "elapsed_ms": round((time.perf_counter() - start) * 1000, 2),
-                "app_version": "0.1.0",
+                "app_version": "0.2.0",
             }
-            repo.add(str(uuid.uuid4()), owner, "trace", trace)
         return {
             "answer": answer,
             "language": language,
@@ -102,7 +221,7 @@ class DeskService:
             "trace": trace,
         }
 
-    def approve(self, actor, proposal_id):
+    def _approve(self, actor, proposal_id):
         actor.require("SCOPE_requests:write")
         owner = self.owner(actor)
         key = "ticket:" + proposal_id
@@ -141,19 +260,7 @@ class DeskService:
                     row = DeskRepository(u.session).add(key, owner, "preference", {"language": value})
             return row.data if row else {"language": None}
 
-    def observed(self, actor, correlation, operation, call):
-        start = time.perf_counter()
-        try:
-            result = call()
-        except Exception as failure:
-            code = failure.error.code if isinstance(failure, BusinessError) else type(failure).__name__
-            self.audit(actor, correlation, operation, "error", code, start)
-            raise
-        if operation != "chat":
-            self.audit(actor, correlation, operation, "ok", None, start)
-        return result
-
-    def audit(self, actor, correlation, operation, status, error_code, start):
+    def audit(self, actor, correlation, operation, status, error_code, start, extra=None):
         with SqlAlchemyUnitOfWork(self.factory) as u:
             DeskRepository(u.session).add(
                 str(uuid.uuid4()),
@@ -161,10 +268,11 @@ class DeskService:
                 "trace",
                 {
                     "request_id": correlation,
+                    **(extra or {}),
                     "operation": operation,
                     "status": status,
                     "error_code": error_code,
                     "elapsed_ms": round((time.perf_counter() - start) * 1000, 2),
-                    "app_version": "0.1.0",
+                    "app_version": "0.2.0",
                 },
             )
