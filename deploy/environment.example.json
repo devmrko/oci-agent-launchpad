@@ -1,0 +1,19 @@
+{
+  "name": "oci-agent-launchpad-dev",
+  "profile": "DEFAULT",
+  "region": "ap-seoul-1",
+  "compartment_id": "<compartment OCID>",
+  "tenancy_id": "<tenancy OCID>",
+  "user_id": "<OCI user OCID>",
+  "model_region": "us-ashburn-1",
+  "chat_model": "google.gemini-2.5-flash-lite",
+  "embedding_model": "cohere.embed-v4.0",
+  "embedding_dimensions": 1536,
+  "memory_store_id": "LPMEM",
+  "memory_schema_owner": "LP_MEMORY_OWNER",
+  "memory_runtime_user": "LP_MEMORY_APP",
+  "memory_namespace": "launchpad-service-desk",
+  "memory_config_path": "/etc/launchpad-memory.json",
+  "companion_tunnel_port": 8093,
+  "companion_token_file": "/absolute/local/path/to/agent-demo-token"
+}

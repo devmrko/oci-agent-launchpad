@@ -102,3 +102,14 @@ resource "oci_database_autonomous_database" "memory" {
 output "instance_id" { value = oci_core_instance.runtime.id }
 output "instance_public_ip" { value = oci_core_instance.runtime.public_ip }
 output "memory_adb_id" { value = try(oci_database_autonomous_database.memory[0].id, null) }
+
+output "deployment" {
+  description = "Non-secret input for deploy/render_environment.py"
+  value = {
+    region         = var.region
+    compartment_id = var.compartment_id
+    instance_id    = oci_core_instance.runtime.id
+    public_ip      = oci_core_instance.runtime.public_ip
+    memory_adb_id  = try(oci_database_autonomous_database.memory[0].id, null)
+  }
+}

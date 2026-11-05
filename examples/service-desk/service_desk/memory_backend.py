@@ -17,13 +17,13 @@ def resources():
     client = oci.generative_ai_inference.GenerativeAiInferenceClient(
         {},
         signer=oci.auth.signers.InstancePrincipalsSecurityTokenSigner(),
-        service_endpoint="https://inference.generativeai.us-ashburn-1.oci.oraclecloud.com",
+        service_endpoint=f"https://inference.generativeai.{cfg.get('embedding_region', 'us-ashburn-1')}.oci.oraclecloud.com",
         timeout=(5, 25),
         retry_strategy=oci.retry.NoneRetryStrategy(),
     )
 
     class Embeddings(IEmbedder):
-        embedding_dimension = 1536
+        embedding_dimension = cfg.get("embedding_dimensions", 1536)
         max_input_tokens = 8192
 
         def embed(self, texts, *, is_query=False):
@@ -32,14 +32,16 @@ def resources():
             response = client.embed_text(
                 EmbedTextDetails(
                     compartment_id=cfg["compartment"],
-                    serving_mode=OnDemandServingMode(model_id="cohere.embed-v4.0"),
+                    serving_mode=OnDemandServingMode(
+                        model_id=cfg.get("embedding_model", "cohere.embed-v4.0")
+                    ),
                     inputs=texts,
                     input_type="SEARCH_QUERY" if is_query else "SEARCH_DOCUMENT",
                     truncate="NONE",
                 )
             )
             vectors = np.asarray(response.data.embeddings, dtype=np.float32)
-            if vectors.shape != (len(texts), 1536) or not np.isfinite(vectors).all():
+            if vectors.shape != (len(texts), self.embedding_dimension) or not np.isfinite(vectors).all():
                 raise ValueError("Invalid embedding result")
             return vectors
 
@@ -58,9 +60,16 @@ def resources():
     )
     try:
         memory_client = oracle_memory_client(
-            pool, Embeddings(), store_id="LPMEM", schema_owner="LP_MEMORY_OWNER"
+            pool,
+            Embeddings(),
+            store_id=cfg.get("store_id", "LPMEM"),
+            schema_owner=cfg.get("schema_owner", "LP_MEMORY_OWNER"),
         )
     except Exception:
         pool.close()
         raise
-    return OracleMemory(memory_client, namespace="launchpad-service-desk"), pool, memory_client
+    return (
+        OracleMemory(memory_client, namespace=cfg.get("namespace", "launchpad-service-desk")),
+        pool,
+        memory_client,
+    )
