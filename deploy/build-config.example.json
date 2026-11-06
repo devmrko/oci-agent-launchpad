@@ -1,0 +1,10 @@
+{
+  "profile": "DEFAULT",
+  "region": "ap-seoul-1",
+  "home_region": "us-ashburn-1",
+  "compartment_id": "ocid1.compartment...",
+  "project_id": "ocid1.devopsproject...",
+  "repository_id": "ocid1.devopsrepository...",
+  "name": "launchpad-skeleton-build",
+  "branch": "main"
+}

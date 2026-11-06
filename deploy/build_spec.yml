@@ -1,0 +1,31 @@
+version: 0.1
+component: build
+timeoutInSeconds: 3600
+shell: bash
+failImmediatelyOnError: true
+steps:
+  - type: Command
+    name: Prepare Python 3.12
+    command: |
+      set -euo pipefail
+      if ! command -v python3.12 >/dev/null; then
+        dnf install -y python3.12 python3.12-pip
+      fi
+      python3.12 --version
+  - type: Command
+    name: Build and verify pinned source snapshot
+    command: |
+      set -euo pipefail
+      cd "${OCI_PRIMARY_SOURCE_DIR}"
+      python3.12 deploy/build_release.py \
+        --source-archive sources.tgz \
+        --source-sha256 "$(cat source.sha256)" \
+        --build-id "${OCI_BUILD_RUN_ID}" \
+        --output result
+outputArtifacts:
+  - name: launchpad-release
+    type: BINARY
+    location: result/release.zip
+  - name: launchpad-release-metadata
+    type: BINARY
+    location: result/release.json
