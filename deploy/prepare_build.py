@@ -17,6 +17,8 @@ def main():
     cfg['region'] = settings['region']
     c = oci.devops.DevopsClient(cfg)
     m = oci.devops.models
+    runner = settings.get('runner')
+    shape = m.CustomBuildRunnerShapeConfig(**runner) if runner else m.DefaultBuildRunnerShapeConfig()
     project = c.get_project(settings['project_id']).data
     if project.compartment_id != settings['compartment_id']:
         raise ValueError('Project compartment mismatch')
@@ -35,7 +37,7 @@ def main():
             display_name='build-and-test', build_pipeline_id=pipeline.id, build_pipeline_stage_type='BUILD',
             build_pipeline_stage_predecessor_collection=m.BuildPipelineStagePredecessorCollection(
                 items=[m.BuildPipelineStagePredecessor(id=pipeline.id)]),
-            image='OL8_X86_64_STANDARD_10', build_spec_file='build_spec.yml',
+            image='OL8_X86_64_STANDARD_10', build_spec_file='build_spec.yml', build_runner_shape_config=shape,
             stage_execution_timeout_in_seconds=3600, primary_build_source='source',
             build_source_collection=m.BuildSourceCollection(items=[m.DevopsCodeRepositoryBuildSource(
                 name='source', repository_id=repo.id, repository_url=repo.http_url,
@@ -43,7 +45,10 @@ def main():
     elif len(stages) == 1 and stages[0].build_pipeline_stage_type == 'BUILD':
         stage = stages[0]
         # Never silently adopt a different build contract merely because names match.
-        if stage.build_spec_file != 'build_spec.yml' or stage.build_source_collection.items[0].repository_id != repo.id:
+        if (stage.build_spec_file != 'build_spec.yml' or len(stage.build_source_collection.items) != 1
+            or stage.build_source_collection.items[0].repository_id != repo.id
+            or stage.build_source_collection.items[0].branch != settings.get('branch', 'main')
+            or oci.util.to_dict(stage.build_runner_shape_config) != oci.util.to_dict(shape)):
             raise ValueError('Existing pipeline has a different source or specification')
     else:
         raise ValueError('Existing pipeline layout requires explicit reconciliation')

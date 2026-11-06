@@ -8,6 +8,7 @@
 
 AgentCore 대응 플랫폼과 OCI Companion은 독립 프로젝트입니다. 플랫폼은 Companion 없이도 사용할 수 있어야 하며, Companion은 구축·빌드·배포·모니터링을 돕습니다. 실제 플랫폼을 구축하면서 발견한 Companion의 부족한 기능은 해당 프로젝트에 구현합니다.
 
+- [고정 소스 빌드 절차](deploy/BUILD.md): 독립 CLI, OCI 입력 스냅샷과 빌드 설정입니다.
 - [현재 진척도와 다음 완료 기준](docs/status.md)
 - [독립 플랫폼과 Companion 연동 범위](docs/companion-agent-platform-review.md): 현재 동작, 관리 화면과 실행 서비스의 책임, 빌드 연결 우선순위입니다.
 - [OCI 배포 결과와 접속 절차](deploy/README.md): 새 VM, 원격 검증, Companion 연동 상태입니다.
