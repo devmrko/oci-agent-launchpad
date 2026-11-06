@@ -4,6 +4,8 @@
 import argparse
 import json
 import os
+import pwd
+import stat
 import re
 import shutil
 import subprocess
@@ -12,9 +14,53 @@ from pathlib import Path
 from activate_release import trusted, validate
 
 
+def probe_access(path, flag):
+    result = subprocess.run(
+        ["/usr/sbin/runuser", "-u", "ocarun", "--", "/usr/bin/test", flag, str(path)],
+        capture_output=True, timeout=10,
+    )
+    return result.returncode == 0
+
+
+def check_staging(staging, uid, probe=probe_access):
+    # The root-owned ancestors prevent replacement of the agent-owned leaf.
+    trusted(staging.parent)
+    info = staging.lstat()
+    if not stat.S_ISDIR(info.st_mode) or stat.S_ISLNK(info.st_mode):
+        raise ValueError("Staging root must be a real directory: " + str(staging))
+    if info.st_uid != uid or info.st_mode & 0o022:
+        raise ValueError("Staging root must belong to ocarun without group/other write: " + str(staging))
+    for parent in reversed(staging.parents):
+        if not probe(parent, "-x"):
+            raise ValueError("ocarun cannot traverse staging ancestor: " + str(parent))
+    for flag in ["-x", "-w"]:
+        if not probe(staging, flag):
+            raise ValueError("ocarun lacks staging access " + flag + ": " + str(staging))
+
+
+def prepare_staging(staging, uid):
+    if staging == Path("/"):
+        raise ValueError("Filesystem root cannot be a staging directory")
+    # Reject unsafe existing ancestors before mkdir/chown can follow them.
+    for parent in reversed(staging.parents):
+        if parent.exists() or parent.is_symlink():
+            trusted(parent)
+    if staging.exists() or staging.is_symlink():
+        info = staging.lstat()
+        if not stat.S_ISDIR(info.st_mode) or info.st_uid not in {0, uid} or info.st_mode & 0o022:
+            raise ValueError("Unsafe existing staging directory: " + str(staging))
+        if info.st_uid == 0 and any(staging.iterdir()):
+            raise ValueError("Refusing to change ownership of nonempty root-owned staging: " + str(staging))
+    staging.mkdir(mode=0o700, parents=True, exist_ok=True)
+    trusted(staging.parent)
+    shutil.chown(staging, user="ocarun", group="oracle-cloud-agent")
+    check_staging(staging, uid)
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--config", type=Path, required=True)
+    p.add_argument("--check", action="store_true", help="Read-only staging and release-root checks; no configuration changes")
     a = p.parse_args()
     if os.geteuid() != 0:
         p.error("Root required")
@@ -37,6 +83,13 @@ def main():
             commands.append("/usr/local/sbin/launchpad-deploy " + alias)
     if not commands:
         raise ValueError("At least one release required")
+    uid = pwd.getpwnam("ocarun").pw_uid
+    if a.check:
+        trusted(root)
+        check_staging(staging, uid)
+        print("Release root trusted; ocarun staging traversal/write checks passed. No changes made.")
+        return
+    prepare_staging(staging, uid)
     root.mkdir(mode=0o755, parents=True, exist_ok=True)
     trusted(root)
     library = Path("/usr/local/lib/launchpad")
@@ -67,10 +120,6 @@ def main():
         trusted(target)
     target.write_text(json.dumps(config, indent=2))
     target.chmod(0o600)
-    staging.mkdir(mode=0o755, parents=True, exist_ok=True)
-    if staging.is_symlink():
-        raise ValueError("Staging root cannot be a symlink")
-    shutil.chown(staging, user="ocarun", group="oracle-cloud-agent")
     sudoers = Path("/etc/sudoers.d/launchpad-deploy")
     temporary = Path("/etc/sudoers.d/.launchpad-deploy.tmp")
     if temporary.exists() or temporary.is_symlink():

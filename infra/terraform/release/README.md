@@ -55,6 +55,16 @@ python3.12 deploy/package_release.py --wheels wheelhouse \
 sudo python3 bootstrap_release.py --config package-deployment.json
 ```
 
+bootstrap은 설치 도구를 바꾸기 전에 staging 상위 경로의 root 소유·쓰기 제한, leaf의 소유권·쓰기 제한을 검사하고 `runuser`로 실제 `ocarun` 계정의 상위 경로 통과 및 leaf 쓰기를 확인합니다. 다른 계정 소유 경로, symlink, 공유 쓰기 경로는 거부합니다. root 소유의 비어 있지 않은 staging은 자동 소유권 변경하지 않습니다. 기존 상위 경로의 권한을 자동으로 넓히지 않으며 오류에 나온 정확한 경로를 관리자가 확인해야 합니다.
+
+이미 준비된 VM에서는 변경 없이 검사할 수 있습니다. `bootstrap_release.py`와 `activate_release.py`를 같은 관리자 작업 디렉터리에 두고 실행하세요.
+
+```sh
+sudo python3 bootstrap_release.py --config /etc/launchpad-deployment.json --check
+```
+
+성공 메시지는 root 신뢰와 `ocarun` 경로 접근 검사 통과를 뜻합니다. Artifact Registry 다운로드·Run Command 전체 실행·SELinux 서비스 도메인 접근·앱 준비 상태까지 보장하지 않습니다.
+
 bootstrap은 root 소유 설치 도구·설정과 `ocarun`의 별칭별 제한된 sudo 명령을 준비합니다. 패키지 자체는 이후 DevOps가 가져옵니다. `staging_root`는 Terraform 값과 일치해야 합니다.
 
 ## 3. Terraform 적용
