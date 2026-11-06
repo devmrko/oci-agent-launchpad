@@ -41,6 +41,6 @@ python deploy/prepare_release_pipeline.py \
 
 2026-11-06 서울 예제 VM에서 직접 호출로 0.4.0 → 0.3.0 → 0.4.0과 각 health 버전을 확인했습니다. OCI DevOps의 0.4.0 실행도 `SUCCEEDED`로 완료됐습니다. Companion 화면에서 시작한 0.3.0 복구와 0.4.0 재배포도 모두 OCI `SUCCEEDED`로 확인했습니다. 복구 후 0.3.0은 Companion 화면, 최종 0.4.0은 VM health로 확인했습니다. 로컬 테스트는 새 릴리스 상태 확인 실패, 재시작 실패, 복구 실패, 잘못된 별칭과 비정상 기존 서비스를 검증합니다.
 
-현재는 미리 설치한 릴리스를 활성화합니다. Artifact Registry에서 패키지 다운로드·검증·설치, Terraform으로 DevOps/IAM/VM 초기화 전체 구성, 다중 VM 및 무중단 배포는 후속 작업입니다. 기존 `install_memory.sh`는 최초 수동 설치용 고정 버전 스크립트이므로 이 활성화 경로와 구분합니다.
+이 문서의 전환 도구는 미리 설치한 릴리스를 활성화합니다. 0.4.1부터 추가한 [Terraform 패키지 배포](../infra/terraform/release/README.md)는 Artifact Registry 전달·검증·설치와 DevOps/IAM 구성을 지원합니다. VM 전체 초기화, 다중 VM 및 무중단 배포는 후속 작업입니다. 기존 `install_memory.sh`는 최초 수동 설치용 고정 버전 스크립트이므로 이 활성화 경로와 구분합니다.
 
 공식 근거: [OCI 배포 명세](https://docs.oracle.com/en-us/iaas/Content/devops/using/deployment_specs.htm), [DevOps IAM 정책](https://docs.oracle.com/en-us/iaas/Content/devops/using/devops_iampolicies.htm).

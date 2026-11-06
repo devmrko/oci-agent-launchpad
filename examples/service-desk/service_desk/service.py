@@ -234,7 +234,7 @@ class DeskService:
                 ],
                 "status": "ok",
                 "elapsed_ms": round((time.perf_counter() - start) * 1000, 2),
-                "app_version": "0.4.0",
+                "app_version": "0.4.1",
             }
         return {
             "answer": answer,
@@ -297,7 +297,7 @@ class DeskService:
                     "status": status,
                     "error_code": error_code,
                     "elapsed_ms": round((time.perf_counter() - start) * 1000, 2),
-                    "app_version": "0.4.0",
+                    "app_version": "0.4.1",
                 },
             )
 
@@ -398,7 +398,7 @@ class DeskService:
                 "session_id": body.session_id,
                 "mode": "explicit-memory",
                 "status": "ok",
-                "app_version": "0.4.0",
+                "app_version": "0.4.1",
                 "memory": {"backend": "oracle-agent-memory", "count": len(items)},
             },
         }

@@ -55,3 +55,5 @@ ADB 없이 실행하려면 `enable_memory=false`로 지정합니다. SSH만 지�
 ## 검증 결과
 
 2026-11-06: Terraform 1.13.5 / OCI provider 8.29.0으로 `fmt`, `validate` 성공. `terraform test`의 모의 공급자 테스트 3개(ADB 비활성화, 전체 공개 SSH 거부, 메모리 Secret 필수) 통과. 테스트에는 Terraform 1.7 이상이 필요합니다. 실제 OCI plan/apply·Resource Manager 실행은 아직 검증하지 않았습니다. 공급자 버전·체크섬은 `.terraform.lock.hcl`에 고정했습니다.
+
+기존 VM에 버전 패키지를 설치하는 별도 구성은 [패키지 배포 Terraform](release/README.md)을 참고하세요. 이 구성의 VM·ADB 상태와 분리하여 적용합니다.

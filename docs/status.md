@@ -1,3 +1,17 @@
+# 현재 상태 — 패키지 자동 설치·배포 0.4.1
+
+2026-11-06: 미리 설치하지 않은 0.4.1을 OCI Artifact Registry → DevOps → 서울 VM 경로로 전달·검증·설치·활성화했습니다. 첫 설치와 최종 Terraform 전용 환경의 재배포가 모두 SUCCEEDED였고, Companion에서도 배포 성공 및 UP·0.4.1을 확인했습니다. 기존 Oracle Agent Memory 기억 조회, 새 채팅 기억 저장·다른 세션 조회와 원문 없는 실행 기록도 통과했습니다.
+
+[패키지 배포 Terraform 안내](../infra/terraform/release/README.md)에 필수·선택 변수와 전체 절차를 정리했습니다. Terraform은 배포 전용 자원 8개를 관리합니다. 기존 VM·ADB는 변경하지 않으며, 적용 후 실제 plan은 No changes입니다. OCI provider의 내용 표현 차이는 실제 SHA-256과 명세 의미 비교를 유지하면서 보정했습니다.
+
+검증: 배포 테스트 23개 및 하위 검사 3개, 예제 앱 14개, Companion 109개, Terraform mock 4개 통과. 현재 Companion은 고정 버전 Generic Artifact 참조를 검사하여 배포 확인 지문에 포함합니다. 신규 패키지의 실제 배포 시작은 OCI SDK로 수행했고 Companion 화면에서는 대상 검증·완료 상태·앱 및 기억 실행을 확인했습니다.
+
+남은 범위: 새 VM 전체 bootstrap, ADB 사용자·비밀값 초기화 통합, 다중 VM 무중단 전환. 현재 설치 도구 준비는 관리자 bootstrap 단계이며 Terraform은 한 불변 릴리스 단위로 상태를 보관합니다. AgentCore 주요 기능 전체 대체는 여전히 진행 중입니다.
+
+아래는 이전 버전 검증 이력입니다.
+
+---
+
 # 현재 상태 — Companion 배포·복구 연결
 
 2026-11-06: Companion의 배포 화면에서 서울 예제 VM의 OCI DevOps 파이프라인을 실행했습니다. 0.4.0 → 0.3.0 복구는 OCI `SUCCEEDED`와 Companion의 `UP · 0.3.0`을 확인했고, 화면에서 시작한 0.4.0 재배포도 OCI API `SUCCEEDED`와 실제 VM health `UP · 0.4.0`을 확인했습니다. 최종 브라우저 재확인은 Edge의 다른 확장 UI가 자동화를 차단하여 진행하지 못했습니다.

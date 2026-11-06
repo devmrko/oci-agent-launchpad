@@ -1,12 +1,13 @@
 """Verify explicit chat memory across sessions against actual Oracle memory."""
-import json
+import json, os
 from pathlib import Path
 from uuid import uuid4
 import httpx
 
+expected_version=os.environ.get('EXPECTED_VERSION','0.4.1')
 token=next(iter(json.loads(Path('/var/lib/launchpad/.run/demo-accounts.json').read_text())))
 with httpx.Client(base_url='http://127.0.0.1:8092',headers={'Authorization':'Bearer '+token},timeout=45) as c:
-    assert c.get('/health').json()['version']=='0.4.0'
+    assert c.get('/health').json()['version']==expected_version
     sid=c.post('/api/sessions').json()['session_id']
     label='synthetic-'+str(uuid4())
     saved=c.post('/api/chat',json={'session_id':sid,'message':'기억해 주세요: '+label+' VPN 안내는 짧은 한국어 설명을 선호합니다.'})
@@ -19,4 +20,4 @@ with httpx.Client(base_url='http://127.0.0.1:8092',headers={'Authorization':'Bea
     assert found.json()['proposal_id'] is None
     assert found.json()['trace']['tools'][0]['tool']=='memory-search'
     assert label not in json.dumps(c.get('/api/traces').json())
-    print(json.dumps({'result':'PASS','version':'0.4.0','checks':['chat-explicit-save','new-session-recall','source-id','no-proposal','trace-redaction']}))
+    print(json.dumps({'result':'PASS','version':expected_version,'checks':['chat-explicit-save','new-session-recall','source-id','no-proposal','trace-redaction']}))

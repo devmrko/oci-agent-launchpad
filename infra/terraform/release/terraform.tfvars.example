@@ -1,0 +1,16 @@
+# Required: existing target project/VM, local approved bundle, and checksums.
+region = "ap-seoul-1"
+home_region = "us-ashburn-1"
+compartment_id = "<compartment OCID>"
+project_id = "<DevOps project OCID>"
+instance_id = "<Oracle Linux VM OCID>"
+release_alias = "memory-0.4.1"
+app_version = "0.4.1"
+bundle_path = "/absolute/path/to/release.zip"
+bundle_sha256 = "<64 lowercase hex characters>"
+manifest_sha256 = "<64 lowercase hex characters>"
+
+# Optional defaults:
+profile = "DEFAULT"
+name = "oci-agent-launchpad"
+staging_root = "/var/ocarun_staging/launchpad"

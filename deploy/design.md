@@ -27,3 +27,11 @@ Foundation 0.1.1의 공통 Gateway가 도구 입력·호출 예산·권한·자�
 root가 소유한 설정과 릴리스만 실행하며, root 소유 systemd drop-in으로 ExecStart를 교체한다. 동시 전환은 파일 잠금으로 차단한다. health의 UP 및 기대 버전이 제한 시간 내 확인되지 않거나 재시작이 실패하면 기존 drop-in을 복원하고 기존 서비스가 회복됐는지 확인한다. ADB·SQLite·환경 비밀값은 수정하지 않는다. 사용자는 이전 릴리스 별칭을 지정해 수동 복구도 수행할 수 있다.
 
 DevOps 배포 명세는 이 도구의 고정 경로와 검증한 릴리스 별칭만 호출한다. sudo 권한은 허용된 별칭별 명령으로 제한한다. 이 단계는 준비된 패키지 활성화이며 Artifact Registry 전송이나 Companion UI 연동 완료를 의미하지 않는다.
+
+## Artifact Registry 패키지 설치
+
+2026-11-06 후속 설계. Linux x86_64/Python 3.12용 wheel과 고정 requirements를 ZIP으로 묶어 불변 Artifact Registry에 올린다. Terraform은 레지스트리·파일 업로드·DevOps 아티팩트/단계/파이프라인·정확한 principal 조건의 전용 IAM을 관리하며 기존 프로젝트·VM을 입력받고 전용 배포 환경을 생성한다. 기존 VM·ADB는 import/apply 대상으로 만들지 않는다.
+
+DevOps가 ZIP을 스테이징 경로에 풀어 놓으면 root 전용 설치 도구가 설정에 고정된 manifest SHA-256을 확인한다. 각 파일을 symlink 없이 제한 크기로 root 소유 위치에 복사하며 SHA-256을 확인한다. 검증한 wheel만 오프라인 설치하고 pip check 및 앱 import를 마친 뒤 기존 활성화 도구로 전환한다. 설치 실패 시 새 디렉터리만 정리하고 실행 중 서비스는 건드리지 않는다. 상태 확인 실패 시 기존 활성화 도구가 직전 버전을 복구한다.
+
+기존 VM의 도구·허용 manifest 설정 갱신은 관리자 bootstrap 단계다. IAM·패키지는 Terraform으로 관리하지만 비밀번호·ADB schema 초기화는 이 상태 파일에 포함하지 않는다. 새 VM 전체 초기화와 무중단 배포는 별도 범위다.

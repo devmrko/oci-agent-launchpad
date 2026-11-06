@@ -6,7 +6,7 @@ import httpx
 root=Path('/var/lib/launchpad/.run')
 token=next(iter(json.loads((root/'demo-accounts.json').read_text())))
 with httpx.Client(base_url='http://127.0.0.1:8092',headers={'Authorization':'Bearer '+token},timeout=45) as c:
-    assert c.get('/health').json()['version'] in {'0.3.0','0.4.0'}
+    assert c.get('/health').json()['version'] in {'0.3.0','0.4.0','0.4.1'}
     if sys.argv[1]=='save':
         r=c.post('/api/memories',json={'text':'[Synthetic] I prefer concise Korean explanations for VPN troubleshooting.'})
         r.raise_for_status();item=r.json()['items'][0]
