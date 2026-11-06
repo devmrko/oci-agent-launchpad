@@ -54,3 +54,9 @@ ADB ADMIN/owner 자격은 운영자 초기화 도구의 stdin으로만 전달하
 Linux x86_64/Python 3.12 빌드 실행기는 새 임시 공간에서 고정 소스를 추출하고 Foundation/app wheel을 생성한다. 고정된 메모리 의존성 lock으로 wheel을 수집하고 오프라인 설치 및 pip check를 통과시킨 뒤 예제 테스트를 실행한다. 성공한 경우에만 배포 ZIP과 별도 release.json을 생성한다. release.json은 두 소스 commit, 앱/Foundation 버전, 대상 플랫폼, 빌드 ID, ZIP·manifest SHA-256을 연결한다. 실패한 빌드에서 배포 가능한 최종 결과를 만들지 않는다. 기존 서비스나 ADB는 이 빌드 단계에서 접근하지 않는다.
 
 이 단계의 완료 증거는 결정적 소스 패키징, 입력 오류/비밀 경로 배제 검사, Linux 빌드 실제 실행 결과다. OCI Managed Build와 Companion 연결 성공은 별도의 후속 증거로 기록한다. 빌드 도구와 런타임 의존성 버전을 혼동하지 않으며 런타임 lock과 검증된 wheel을 사용한다.
+
+## 빌드 결과에서 배포로 연결하는 첫 계약
+
+2026-11-06 후속 작업. 관리형 빌드 러너의 확보 여부와 관계없이 동일한 release.zip/release.json을 검증해 Terraform 배포 입력으로 변환한다. release.json에 기록된 ZIP·manifest 해시를 실제 바이트와 대조하고, ZIP 항목은 manifest에 나열된 wheel/requirements만 허용한다. 중복·경로 이동·symlink·크기 초과 항목은 거부한다. 앱/Foundation의 버전은 wheel METADATA와 requirements 고정값 모두와 대조한다. 검증 성공 전에 배포 입력을 내보내지 않는다. 검증은 빌드 실행자의 서명을 대신하지 않으며 신뢰하는 빌드 결과만 사용한다.
+
+다음 예제 릴리스 0.4.2에는 인증된 `/api/capabilities`를 추가한다. 현재 예제의 실행·메모리·도구·인증·승인·추적과 미구현 평가·코드·브라우저 기능을 기계적으로 조회하게 한다. 설정됨과 실제 연결 확인을 구분하며 메모리 건강 상태는 이 조회만으로 정상이라고 표시하지 않는다. 이 API는 Companion에 종속되지 않고 자격증명·주소·사용자 기억을 반환하지 않는다. 공유 운영 플랫폼 전체가 구현됐다는 의미는 아니다.

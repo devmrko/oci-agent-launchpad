@@ -50,3 +50,9 @@ run "reject_other_compartment" {
   }
   expect_failures = [oci_devops_deploy_stage.release]
 }
+
+run "reject_wrong_release_metadata" {
+  command = plan
+  variables { release_metadata_path = "tests/package.txt" }
+  expect_failures = [oci_generic_artifacts_content_artifact_by_path.metadata]
+}

@@ -42,3 +42,9 @@ variable "staging_root" {
     error_message = "Use an absolute safe staging path."
   }
 }
+
+variable "release_metadata_path" {
+  type        = string
+  default     = null
+  description = "Optional verified release.json; stored next to the immutable ZIP."
+}

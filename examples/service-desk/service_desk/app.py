@@ -132,7 +132,7 @@ def create_app(*, database_url=None, accounts=None, planner=None, memory_store=N
         if memory_pool is not None:
             memory_pool.close()
 
-    app = FastAPI(title="Service Desk — synthetic example", version="0.4.1", lifespan=lifespan)
+    app = FastAPI(title="Service Desk — synthetic example", version="0.4.2", lifespan=lifespan)
     install_web(app, Security(settings, verifier=verifier))
     app.state.desk = service
     actor_type = Annotated[Actor, Depends(current_actor)]
@@ -143,7 +143,31 @@ def create_app(*, database_url=None, accounts=None, planner=None, memory_store=N
 
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
-        return {"status": "UP", "version": "0.4.1", "synthetic": True}
+        return {"status": "UP", "version": "0.4.2", "synthetic": True}
+
+    @app.get("/api/capabilities")
+    def capabilities(actor: actor_type):
+        # This describes the example's implementation, not external service health.
+        return {
+            "schema_version": 1,
+            "app_version": app.version,
+            "synthetic": True,
+            "capabilities": {
+                "runtime": {"status": "partial", "features": ["sessions", "health"]},
+                "memory": {
+                    "status": "configured" if service.memory_store is not None else "not_configured",
+                    "health": "not_checked",
+                    "features": ["explicit_save", "semantic_search"] if service.memory_store is not None else [],
+                },
+                "gateway": {"status": "partial", "features": ["local_tools", "input_validation"]},
+                "identity": {"status": "partial", "mode": "demo_token" if verifier is not None else "jwt"},
+                "policy": {"status": "partial", "features": ["ownership", "approval", "idempotency"]},
+                "observability": {"status": "partial", "features": ["request_traces", "tool_events"]},
+                "evaluations": {"status": "not_implemented"},
+                "code_interpreter": {"status": "not_implemented"},
+                "browser": {"status": "not_implemented"},
+            },
+        }
 
     @app.post("/api/sessions")
     def new_session(actor: actor_type):

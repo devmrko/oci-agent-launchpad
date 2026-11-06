@@ -4,7 +4,7 @@ from pathlib import Path
 from uuid import uuid4
 import httpx
 
-expected_version=os.environ.get('EXPECTED_VERSION','0.4.1')
+expected_version=os.environ.get('EXPECTED_VERSION','0.4.2')
 token=next(iter(json.loads(Path('/var/lib/launchpad/.run/demo-accounts.json').read_text())))
 with httpx.Client(base_url='http://127.0.0.1:8092',headers={'Authorization':'Bearer '+token},timeout=45) as c:
     assert c.get('/health').json()['version']==expected_version

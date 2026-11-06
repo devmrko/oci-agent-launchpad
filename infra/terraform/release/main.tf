@@ -140,3 +140,30 @@ output "manifest_sha256" { value = var.manifest_sha256 }
 output "bootstrap_release" {
   value = { directory = var.release_alias, version = var.app_version, manifest_sha256 = var.manifest_sha256 }
 }
+
+resource "oci_generic_artifacts_content_artifact_by_path" "metadata" {
+  count         = var.release_metadata_path == null ? 0 : 1
+  repository_id = oci_artifacts_repository.releases.id
+  artifact_path = "${var.release_alias}/release.json"
+  version       = var.app_version
+  source        = var.release_metadata_path
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes  = [content]
+    precondition {
+      condition = try(
+        jsondecode(file(var.release_metadata_path)).bundle_sha256 == var.bundle_sha256 &&
+        jsondecode(file(var.release_metadata_path)).manifest_sha256 == var.manifest_sha256 &&
+        jsondecode(file(var.release_metadata_path)).app_version == var.app_version,
+      false)
+      error_message = "Release metadata does not match the approved package."
+    }
+    postcondition {
+      condition     = self.sha256 == filesha256(var.release_metadata_path)
+      error_message = "Uploaded release metadata checksum mismatch."
+    }
+  }
+}
+output "release_metadata_artifact_id" {
+  value = try(oci_generic_artifacts_content_artifact_by_path.metadata[0].artifact_id, null)
+}
