@@ -43,3 +43,6 @@ DevOps가 ZIP을 스테이징 경로에 풀어 놓으면 root 전용 설치 도�
 ADB ADMIN/owner 자격은 운영자 초기화 도구의 stdin으로만 전달하고 VM IAM에는 ADMIN secret 접근을 주지 않는다. 초기화 결과 중 앱 user/password/DSN/메모리 설정만 Vault에 게시한다. 비밀값은 Terraform 변수·상태·cloud-init·소스에 포함하지 않는다. 새 VM 정책은 정확한 VM principal과 지정 secret OCID로 제한한다. ADB ACL 추가는 기존 허용 주소를 유지하고 신규 VM 주소만 더한다.
 
 검증은 별도 새 VM에서 cloud-init 완료, 첫 health, Vault 읽기, ADB 메모리 저장·조회와 재부팅 후 데이터 유지까지 확인한다. 기존 실행 VM과 ADB 데이터는 유지한다.
+
+
+2026-11-06 실제 검증에서 테넌시의 legacy IMDS 차단 정책을 확인했다. Terraform과 SDK 생성 요청 모두 IMDSv2 전용을 명시한다. 부팅 설치 코드는 실행 파일만 umask 022로 생성하고 비밀값 생성은 077로 복귀한다. OCI 다운로드는 응답의 raw 스트림을 읽는다. 최초 user_data 편집으로 기존 VM을 교체하지 않도록 해당 필드만 ignore_changes로 처리하며, 부팅 도구 관리자 갱신과 일반 앱 릴리스 배포를 구분한다. 새 VM에서 수정 후 실제 모델·메모리·재부팅 보존 검증을 통과했다. 자세한 범위는 bootstrap-runtime.md에 기록한다.

@@ -70,6 +70,9 @@ resource "oci_core_instance" "runtime" {
     subnet_id        = oci_core_subnet.runtime.id
     assign_public_ip = true
   }
+  instance_options {
+    are_legacy_imds_endpoints_disabled = true
+  }
   agent_config {
     is_management_disabled = false
     is_monitoring_disabled = false
@@ -77,6 +80,11 @@ resource "oci_core_instance" "runtime" {
       name          = "Compute Instance Run Command"
       desired_state = "ENABLED"
     }
+  }
+  # First-boot content is immutable for an existing VM. Use release deployment
+  # for updates; changing bootstrap source must not replace a data-bearing VM.
+  lifecycle {
+    ignore_changes = [metadata["user_data"]]
   }
   metadata = {
     ssh_authorized_keys = var.ssh_public_key

@@ -6,7 +6,7 @@
 
 Terraform은 네트워크·VM·ADB의 구성과 연결을 관리합니다. 커스텀 이미지는 VM 안의 OS와 공통 실행 환경을 미리 준비할 때 사용합니다. 둘은 함께 사용할 수 있습니다. 초기에는 Oracle Linux 기본 이미지로 시작하고 반복 설치 시간이 문제가 될 때 Packer 등으로 검증된 커스텀 이미지를 만듭니다. 이미지에는 고객 데이터·DB 암호·SSH 개인키·wallet을 넣지 않습니다.
 
-앱 릴리스는 이미지와 분리해 배포합니다. 이미지 변경은 VM 교체를 일으킬 수 있으므로 실행 전 plan을 확인합니다. 기존 예제의 SQLite 업무 DB는 VM에 있으므로 기존 VM을 교체하기 전 별도 영속 볼륨/DB로 옮기는 작업이 필요합니다.
+앱 릴리스는 이미지와 분리해 배포합니다. 최초 부팅 코드(`metadata.user_data`)의 편집만으로 기존 VM이 교체되지 않도록 해당 필드는 생성 후 변경 감지에서 제외합니다. 수정본은 다음 새 VM에 적용하며 기존 VM의 부팅 도구 변경은 별도 관리자 작업입니다. 이미지 변경은 VM 교체를 일으킬 수 있으므로 실행 전 plan을 확인합니다. 기존 예제의 SQLite 업무 DB는 VM에 있으므로 기존 VM을 교체하기 전 별도 영속 볼륨/DB로 옮기는 작업이 필요합니다.
 
 ## 입력값
 
@@ -54,6 +54,6 @@ ADB 없이 실행하려면 `enable_memory=false`로 지정합니다. SSH만 지�
 
 ## 검증 결과
 
-2026-11-06: Terraform 1.13.5 / OCI provider 8.29.0으로 `fmt`, `validate` 성공. `terraform test`의 모의 공급자 테스트 4개(ADB 비활성화, 전체 공개 SSH 거부, 메모리 Secret 필수, bootstrap 참조값 경계) 통과. 테스트에는 Terraform 1.7 이상이 필요합니다. 실제 plan과 apply를 수행해 네트워크 5개를 생성했으나 VM 생성은 OCI 404로 실패했습니다. 첫 부팅과 Resource Manager 실행은 아직 검증하지 못했습니다. 공급자 버전·체크섬은 `.terraform.lock.hcl`에 고정했습니다.
+2026-11-06: Terraform 1.13.5 / OCI provider 8.29.0으로 `fmt`, `validate` 성공. `terraform test`의 모의 공급자 테스트 4개(ADB 비활성화, 전체 공개 SSH 거부, 메모리 Secret 필수, bootstrap 참조값 경계) 통과. 테스트에는 Terraform 1.7 이상이 필요합니다. 실제 plan/apply로 네트워크·VM·정책 생성 후 `No changes`를 확인했습니다. 404 원인은 구형 IMDS를 금지하는 테넌시 정책이었고 IMDSv2 전용 설정으로 해결했습니다. 새 VM의 부팅 코드 두 곳을 수정한 뒤 앱·메모리·재부팅 검증을 마쳤습니다. 수정본을 사용한 또 다른 빈 VM의 무개입 생성과 Resource Manager 실행은 미검증입니다. 공급자 버전·체크섬은 `.terraform.lock.hcl`에 고정했습니다.
 
 기존 VM에 버전 패키지를 설치하는 별도 구성은 [패키지 배포 Terraform](release/README.md)을 참고하세요. 이 구성의 VM·ADB 상태와 분리하여 적용합니다.

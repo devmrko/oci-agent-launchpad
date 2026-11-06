@@ -2,7 +2,7 @@
 
 고객별 VM을 구성하는 담당자가 같은 릴리스를 반복 설치하도록 만드는 선택형 첫 부팅 절차입니다. Terraform에는 패키지·Secret 식별자만 넣고, 새 VM이 Instance Principal로 앱용 DB 자격 증명을 받습니다. DB 관리자 암호를 VM 부팅 설정에 넣지 않습니다.
 
-**현재 상태:** 코드와 로컬 경계 테스트는 통과했습니다. 2026-11-06 서울 실제 적용에서는 네트워크 생성 후 VM 생성이 OCI `404 NotAuthorizedOrNotFound`로 실패했습니다. 새 VM 첫 실행·메모리 통신·재부팅 후 유지까지 검증한 구성은 아닙니다. 기존 0.4.1 VM의 패키지 배포 검증과 구분해야 합니다.
+**현재 상태:** 2026-11-06 서울에서 새 Oracle Linux VM을 생성하고 Vault 앱용 자격 증명 수신, 검증된 0.4.1 패키지 설치, 실제 모델 요청, Oracle 메모리 저장·검색, VM 재부팅 후 복구를 확인했습니다. 검증 중 발견한 다운로드 응답 처리·코드 파일 권한 오류는 저장소와 새 VM의 부팅 스크립트를 수정해 복구했습니다. 수정본으로 또 다른 빈 VM을 처음부터 무개입 생성하는 재검증은 수행하지 않았습니다.
 
 ## 동작과 준비 조건
 
@@ -59,6 +59,26 @@ curl -fsS http://127.0.0.1:8092/health
 
 health 성공만으로 메모리를 검증했다고 보지 않습니다. 예제의 `smoke_memory_chat.py`로 저장·다른 세션 검색을 확인하고, `smoke_memory_api.py save` 후 VM을 재부팅해 `verify`로 보존 여부를 확인해야 합니다. 토큰은 `/var/lib/launchpad/.run/demo-accounts.json`에 있으며 출력하지 않습니다. 이후 DevOps VM 환경과 Companion 연결을 별도로 구성해야 합니다.
 
-2026-11-06 적용에서는 새 VCN·게이트웨이·라우팅·보안 목록·서브넷이 Terraform state에 남아 있습니다. VM과 bootstrap IAM 정책은 생성되지 않았습니다. 이미지 조회·서브넷 조회는 성공했지만 Terraform과 SDK 모두 생성 404를 반환했습니다. 기존 서브넷과 이전 Oracle Linux 9.8 이미지 비교도 같은 결과였습니다. 권한 문제인지 다른 자원 접근 문제인지는 확정하지 못했습니다. 실패한 plan을 다시 적용하지 말고 현재 state에서 새 plan을 만든 뒤 남은 생성 대상을 확인합니다. ADB ACL은 변경하지 않았습니다.
+## 실제 검증과 수정한 문제
 
-실제 수행한 검증: Python 33개와 3개 subtest, Terraform 모의 공급자 4개 통과. 기존 ADB 실행 계정 로그인·저장소 조회와 앱용 Vault Secret 생성은 성공했습니다. 기존 계정에 이미 부여됐던 권한을 회수하는 마이그레이션은 포함하지 않습니다. 새 VM 생성 실패로 부팅 통합 검증은 남아 있습니다.
+서울 `Joungmin.Ko`의 `oci-agent-launchpad-bootstrap-vm`은 E5 Flex 1 OCPU·8GB, 50GB 부트 볼륨입니다. 기존 예제 VM과 ADB를 유지하며 기존 ADB ACL에 새 VM의 `/32` 주소만 추가했습니다. 두 VM이 실행 중이므로 추가 VM·디스크 비용이 발생합니다. 신규 VM을 기존 Companion 배포 대상으로 자동 전환하지 않았습니다.
+
+처음 생성 404는 테넌시의 `INSTANCE_CREATE` 거부 조건이 `request.instanceOptions.areLegacyEndpointsDisabled != 'true'`였기 때문입니다. IMDSv2만 허용하도록 `are_legacy_imds_endpoints_disabled = true`를 명시하자 생성에 성공했습니다. 거부 정책을 변경하거나 사용자 권한을 확대하지 않았습니다. SDK 생성 스크립트에도 같은 설정을 반영했습니다.
+
+첫 설치에서는 두 가지를 추가로 고쳤습니다. OCI 다운로드 응답의 파일 스트림은 `response.data.raw`로 읽어야 했습니다. 또한 부팅 서비스의 `UMask=0077`이 앱 코드에도 적용돼 실행 권한 오류가 발생했습니다. 코드 설치 구간만 `022`로 실행하고 이후 원래 마스크를 복구합니다. DB 설정·토큰·서비스 환경 파일은 계속 비공개입니다. 수정본을 SSH로 배치한 뒤 이미 다운로드한 패키지를 재사용해 설치를 완료했으며, 별도 수동 pip 설치는 하지 않았습니다.
+
+확인한 결과:
+
+- Python 배포 테스트 35개와 subtest 3개, Terraform 모의 공급자 4개 통과.
+- 실제 앱 `UP / 0.4.1`, SELinux Enforcing 유지.
+- 실제 OCI 모델의 규정 출처 확인, 승인 전 접수 금지, 승인 중복 방지, 추적 조회 통과.
+- 대화를 통한 기억 저장과 새 세션 검색, 근거 ID, 원문 비노출 통과.
+- VM 재부팅 후 `BOOTSTRAP_ALREADY_INITIALIZED`, 앱 자동 복구 확인.
+- 재부팅 전후 SQLite·데모 토큰·메모리 설정·서비스 환경 파일 해시 일치. Oracle에 저장한 기억 재조회 통과.
+- 기존 VM `0.4.1 / UP` 유지. Terraform 최종 plan은 `No changes`.
+
+초기 관리자 작업인 ADB 스키마 생성·Vault 게시·기존 ADB ACL 갱신, 신규 VM의 DevOps 환경과 Companion 등록은 별도 단계입니다. 기존 계정의 과거 권한을 회수하는 마이그레이션과 운영용 인증·다중 VM 가용성까지 완료한 것은 아닙니다.
+
+## 기존 VM의 부팅 설정 변경
+
+OCI provider는 `metadata.user_data` 변경을 VM 교체로 처리합니다. 업무 데이터가 있는 VM을 부팅 코드 편집만으로 교체하지 않도록 이 필드의 변경 감지를 제외했습니다. 수정한 부팅 코드는 다음 새 VM 생성에 적용됩니다. 기존 VM의 cloud-init 본문은 업데이트되지 않으며, 일반 앱 갱신은 DevOps 릴리스로 수행합니다. 기존 VM의 부팅 도구를 수정해야 하면 관리자 패치를 별도로 검증·배치합니다. 이 생명주기 규칙은 이미지·사양 등 다른 변경의 교체 가능성까지 막지 않으므로 항상 plan을 검토합니다.

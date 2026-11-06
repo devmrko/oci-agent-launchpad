@@ -188,6 +188,7 @@ instance = create(
                 "ssh_authorized_keys": Path(spec["ssh_public_key"]).read_text(),
                 "user_data": base64.b64encode(cloud_init.encode()).decode(),
             },
+            instance_options=m.InstanceOptions(are_legacy_imds_endpoints_disabled=True),
             agent_config=m.LaunchInstanceAgentConfigDetails(
                 is_management_disabled=False,
                 is_monitoring_disabled=False,

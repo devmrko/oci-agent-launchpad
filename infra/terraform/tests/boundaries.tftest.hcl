@@ -11,6 +11,10 @@ variables {
 run "without_memory" {
   command = plan
   assert {
+    condition = oci_core_instance.runtime.instance_options[0].are_legacy_imds_endpoints_disabled == true
+    error_message = "New VMs must disable legacy IMDS endpoints."
+  }
+  assert {
     condition     = length(oci_database_autonomous_database.memory) == 0
     error_message = "Disabling memory must not create a paid ADB."
   }

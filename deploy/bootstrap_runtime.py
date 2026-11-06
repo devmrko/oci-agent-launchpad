@@ -137,7 +137,7 @@ def download(client, identifier, archive, digest):
     try:
         with temporary.open("wb") as stream:
             while True:
-                chunk = response.data.read(1024 * 1024)
+                chunk = response.data.raw.read(1024 * 1024)
                 if not chunk:
                     break
                 total += len(chunk)
@@ -151,6 +151,21 @@ def download(client, identifier, archive, digest):
         response.data.close()
         if temporary.exists():
             temporary.unlink()
+
+
+def install_readable(deployment, commands, alias):
+    """Only executable code installation uses a world-readable creation mask."""
+    import sys
+
+    previous_args = sys.argv
+    previous_mask = os.umask(0o022)
+    sys.argv = ["bootstrap_release.py", "--config", str(commands)]
+    try:
+        prepare_commands()
+        install({**deployment, "staging_root": str(WORK / "staged")}, alias)
+    finally:
+        sys.argv = previous_args
+        os.umask(previous_mask)
 
 
 def bootstrap(cfg):
@@ -222,17 +237,8 @@ def bootstrap(cfg):
     os.chown(memory, account.pw_uid, account.pw_gid)
     commands = WORK / "deployment.json"
     atomic_write(commands, json.dumps(deployment).encode())
-    import sys
-
-    previous = sys.argv
-    sys.argv = ["bootstrap_release.py", "--config", str(commands)]
-    try:
-        prepare_commands()
-    finally:
-        sys.argv = previous
-    install_cfg = {**deployment, "staging_root": str(WORK / "staged")}
     print("BOOTSTRAP_PHASE install", flush=True)
-    install(install_cfg, cfg["release_alias"])
+    install_readable(deployment, commands, cfg["release_alias"])
     token_dir = data / ".run"
     token_dir.mkdir(mode=0o700, exist_ok=True)
     os.chown(token_dir, account.pw_uid, account.pw_gid)

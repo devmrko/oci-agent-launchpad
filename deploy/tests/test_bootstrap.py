@@ -82,3 +82,48 @@ def test_reboot_does_not_fetch_or_overwrite_runtime(tmp_path, monkeypatch):
     (tmp_path / "ready.json").write_text(json.dumps({"version": "0.4.1"}))
     boot.bootstrap(config())
     fetch.assert_not_called()
+
+
+def test_download_reads_oci_response_raw_stream(tmp_path):
+    import io
+
+    payload = b"synthetic artifact"
+    response = Mock()
+    response.data.raw = io.BytesIO(payload)
+    response.data.read = Mock(
+        side_effect=AssertionError("OCI returns a requests response")
+    )
+    client = Mock()
+    client.get_generic_artifact_content.return_value = response
+    target = tmp_path / "release.zip"
+    boot.download(
+        client,
+        "ocid1.genericartifact.oc1.test",
+        target,
+        hashlib.sha256(payload).hexdigest(),
+    )
+    assert target.read_bytes() == payload
+    response.data.close.assert_called_once()
+
+
+def test_code_install_is_readable_and_private_mask_restored(tmp_path, monkeypatch):
+    import os
+    import stat
+
+    def prepare():
+        (tmp_path / "code").mkdir(mode=0o755)
+
+    def install(cfg, alias):
+        (tmp_path / "code" / "module.py").write_text("pass")
+
+    monkeypatch.setattr(boot, "prepare_commands", prepare)
+    monkeypatch.setattr(boot, "install", install)
+    old = os.umask(0o077)
+    try:
+        boot.install_readable({}, tmp_path / "config.json", "memory-0.4.1")
+        (tmp_path / "private").write_text("synthetic")
+    finally:
+        os.umask(old)
+    assert stat.S_IMODE((tmp_path / "code").stat().st_mode) == 0o755
+    assert stat.S_IMODE((tmp_path / "code" / "module.py").stat().st_mode) == 0o644
+    assert stat.S_IMODE((tmp_path / "private").stat().st_mode) == 0o600
