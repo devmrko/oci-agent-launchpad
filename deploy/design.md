@@ -46,3 +46,11 @@ ADB ADMIN/owner 자격은 운영자 초기화 도구의 stdin으로만 전달하
 
 
 2026-11-06 실제 검증에서 테넌시의 legacy IMDS 차단 정책을 확인했다. Terraform과 SDK 생성 요청 모두 IMDSv2 전용을 명시한다. 부팅 설치 코드는 실행 파일만 umask 022로 생성하고 비밀값 생성은 077로 복귀한다. OCI 다운로드는 응답의 raw 스트림을 읽는다. 최초 user_data 편집으로 기존 VM을 교체하지 않도록 해당 필드만 ignore_changes로 처리하며, 부팅 도구 관리자 갱신과 일반 앱 릴리스 배포를 구분한다. 새 VM에서 수정 후 실제 모델·메모리·재부팅 보존 검증을 통과했다. 자세한 범위는 bootstrap-runtime.md에 기록한다.
+
+## 동작하는 뼈대: 고정 소스 빌드 계약
+
+2026-11-06. 첫 구현 단위는 Companion과 독립적으로 실행할 수 있는 소스/패키지 빌드 도구다. 기존 커밋 하드코딩을 제거하고 Launchpad·Foundation의 Git revision을 필수 입력받는다. revision은 실제 commit SHA로 해석하고, 작업 트리의 미커밋 파일은 포함하지 않는다. 소스 번들에는 허용한 소스·테스트·배포 도구만 포함하며 비밀값·Git 인증 설정을 넣지 않는다. symlink/submodule 입력은 거부한다. 같은 두 revision으로 만든 소스 번들은 같은 해시를 가져야 한다.
+
+Linux x86_64/Python 3.12 빌드 실행기는 새 임시 공간에서 고정 소스를 추출하고 Foundation/app wheel을 생성한다. 고정된 메모리 의존성 lock으로 wheel을 수집하고 오프라인 설치 및 pip check를 통과시킨 뒤 예제 테스트를 실행한다. 성공한 경우에만 배포 ZIP과 별도 release.json을 생성한다. release.json은 두 소스 commit, 앱/Foundation 버전, 대상 플랫폼, 빌드 ID, ZIP·manifest SHA-256을 연결한다. 실패한 빌드에서 배포 가능한 최종 결과를 만들지 않는다. 기존 서비스나 ADB는 이 빌드 단계에서 접근하지 않는다.
+
+이 단계의 완료 증거는 결정적 소스 패키징, 입력 오류/비밀 경로 배제 검사, Linux 빌드 실제 실행 결과다. OCI Managed Build와 Companion 연결 성공은 별도의 후속 증거로 기록한다. 빌드 도구와 런타임 의존성 버전을 혼동하지 않으며 런타임 lock과 검증된 wheel을 사용한다.
