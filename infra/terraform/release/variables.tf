@@ -48,3 +48,18 @@ variable "release_metadata_path" {
   default     = null
   description = "Optional verified release.json; stored next to the immutable ZIP."
 }
+
+variable "create_deployment_policy" {
+  type        = bool
+  default     = true
+  description = "False only when an existing policy owner grants this pipeline its required permissions."
+}
+variable "additional_pipeline_ids" {
+  type        = list(string)
+  default     = []
+  description = "Exact extra deployment pipeline principals managed by this policy owner."
+  validation {
+    condition     = alltrue([for id in var.additional_pipeline_ids : can(regex("^ocid1\\.devopsdeploypipeline\\.[A-Za-z0-9._-]+$", id))])
+    error_message = "Use exact deployment pipeline OCIDs."
+  }
+}

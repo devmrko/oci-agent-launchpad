@@ -60,3 +60,17 @@ Companion에서 `빌드 → 실행 이력 → 저장하지 않은 빌드의 이�
 Companion 첫 실행은 로그 미설정으로 거부됐습니다. 로그 활성화 후 브라우저 확장 UI가 자동화를 차단하여, 후속 관리형 빌드는 SDK로 시작했습니다. 이 기록은 Companion 버튼 성공이나 관리형 빌드 최종 성공을 의미하지 않습니다. 최종 결과는 [현재 상태](../docs/status.md)에 별도로 기록합니다.
 
 최종 OCI 결과: 기본 러너 두 번과 명시적 2 OCPU·8GB 한 번 모두 `Unable to get Build Runner, please try again.`으로 실패했습니다. 빌드 명령 이전의 GET_BUILD_RUNNER 실패이며 Registry 전달이나 배포는 수행되지 않았습니다. 서비스 할당 상태를 확인한 뒤 고정 커밋으로 다시 실행할 수 있습니다. 같은 실패를 반복해 실행 성공으로 간주하지 않습니다.
+
+## 검증된 산출물을 배포 입력으로 연결하기
+
+Linux 빌드 결과를 받은 뒤 저장소 루트에서 실행합니다. `base-vars.json`에는 배포 대상 리전·구획·프로젝트·VM 등 기존 Terraform 변수가 있어야 합니다. 기존 릴리스 상태를 재사용하지 않고 새 workspace를 사용하세요.
+
+```bash
+python deploy/verify_release.py --result .run/build-result \
+  --base-vars .run/base-vars.json --alias memory-0.4.2 \
+  --output .run/release-042.tfvars.json
+```
+
+이 도구는 ZIP·manifest·파일 목록·개별 해시·wheel의 실제 앱/Foundation 버전·고정 의존성을 대조하고, 검증된 파일 경로와 해시를 배포 변수에 넣습니다. `release.json`은 선택적 Terraform 아티팩트로 ZIP 옆에 보관됩니다. 해시와 메타데이터는 서명 또는 소스 신뢰를 대신하지 않습니다. 빌드가 테스트를 실행했다는 진술의 독립적인 증명도 아닙니다.
+
+다음은 [VM 설치 관리자 준비와 Terraform 배포](../infra/terraform/release/README.md)를 따릅니다. 현재 관리자 manifest 등록과 산출물 전달은 별도 단계이며 Companion에서의 자동 완주 경로는 아직 미완성입니다.

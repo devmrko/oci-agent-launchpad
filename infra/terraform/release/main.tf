@@ -120,15 +120,21 @@ resource "oci_devops_deploy_stage" "release" {
 
   }
 }
+moved {
+  from = oci_identity_policy.release
+  to   = oci_identity_policy.release[0]
+}
 resource "oci_identity_policy" "release" {
+  count          = var.create_deployment_policy ? 1 : 0
   provider       = oci.home
   compartment_id = var.compartment_id
   name           = "${var.name}-${var.release_alias}-deployment"
   description    = "Exact deployment pipeline and VM principals; no secret access"
-  statements = concat([
-    for permission in ["read devops-family", "read instance-family", "use instance-agent-command-family", "use ons-topics", "read generic-artifacts", "read artifact-repositories"] :
-    "Allow any-user to ${permission} in compartment id ${var.compartment_id} where request.principal.id = '${oci_devops_deploy_pipeline.release.id}'"
-    ], [
+  statements = concat(flatten([
+    for pipeline in concat([oci_devops_deploy_pipeline.release.id], var.additional_pipeline_ids) : [
+      for permission in ["read devops-family", "read instance-family", "use instance-agent-command-family", "use ons-topics", "read generic-artifacts", "read artifact-repositories"] :
+      "Allow any-user to ${permission} in compartment id ${var.compartment_id} where request.principal.id = '${pipeline}'"
+    ]]), [
     for permission in ["use instance-agent-command-execution-family", "read generic-artifacts"] :
     "Allow any-user to ${permission} in compartment id ${var.compartment_id} where request.principal.id = '${var.instance_id}'"
   ])

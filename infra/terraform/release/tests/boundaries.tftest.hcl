@@ -28,7 +28,7 @@ run "immutable_and_scoped" {
     error_message = "Release packages must be immutable."
   }
   assert {
-    condition     = length(oci_identity_policy.release.statements) == 8
+    condition     = length(oci_identity_policy.release[0].statements) == 8
     error_message = "Unexpected additional permissions."
   }
 }
@@ -55,4 +55,21 @@ run "reject_wrong_release_metadata" {
   command = plan
   variables { release_metadata_path = "tests/package.txt" }
   expect_failures = [oci_generic_artifacts_content_artifact_by_path.metadata]
+}
+
+run "external_policy_owner" {
+  command = plan
+  variables { create_deployment_policy = false }
+  assert {
+    condition = length(oci_identity_policy.release) == 0
+    error_message = "An externally managed policy must not create another policy."
+  }
+}
+run "exact_additional_principal" {
+  command = plan
+  variables { additional_pipeline_ids = ["ocid1.devopsdeploypipeline.oc1.ap-seoul-1.test"] }
+  assert {
+    condition = length(oci_identity_policy.release[0].statements) == 14 && length([for s in slice(oci_identity_policy.release[0].statements, 6, 12) : s if strcontains(s, "request.principal.id = 'ocid1.devopsdeploypipeline.oc1.ap-seoul-1.test'")]) == 6
+    error_message = "Additional grants must name the exact pipeline."
+  }
 }

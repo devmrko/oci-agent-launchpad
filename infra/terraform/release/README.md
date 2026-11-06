@@ -6,7 +6,7 @@
 
 ## 만드는 것과 필요한 것
 
-이 구성은 불변 패키지 저장소, 패키지 업로드, DevOps 배포 환경·파이프라인·명세·패키지 참조·단계, 전용 IAM 정책을 관리합니다(총 8개 리소스). 기존 VM·ADB·네트워크는 생성하거나 수정하지 않습니다. 배포 환경은 입력한 VM 한 개만 참조합니다.
+이 구성은 불변 패키지 저장소, 패키지 업로드, DevOps 배포 환경·파이프라인·명세·패키지 참조·단계, 전용 IAM 정책을 관리합니다(기본 8개 리소스, 메타데이터 포함 시 9개). 기존 정책을 사용하는 선택 경로에서는 새 IAM 정책을 만들지 않습니다. 기존 VM·ADB·네트워크는 생성하거나 수정하지 않습니다. 배포 환경은 입력한 VM 한 개만 참조합니다.
 
 필수 준비물:
 
@@ -23,7 +23,7 @@ Linux x86_64/Python 3.12 환경에서 실행합니다. 아래 작업은 현재 �
 
 ```sh
 cp examples/service-desk/requirements-memory.lock requirements.txt
-printf '\ndevmrko-python-foundation==0.1.2\nlaunchpad-service-desk==0.4.1\n' >> requirements.txt
+printf '\ndevmrko-python-foundation==0.1.2\nlaunchpad-service-desk==0.4.2\n' >> requirements.txt
 python3.12 -m pip download --only-binary=:all: --find-links wheelhouse \
   -r requirements.txt -d wheelhouse
 python3.12 deploy/package_release.py --wheels wheelhouse \
@@ -40,9 +40,9 @@ python3.12 deploy/package_release.py --wheels wheelhouse \
 {
   "staging_root": "/var/ocarun_staging/launchpad",
   "releases": {
-    "memory-0.4.1": {
-      "directory": "memory-0.4.1",
-      "version": "0.4.1",
+    "memory-0.4.2": {
+      "directory": "memory-0.4.2",
+      "version": "0.4.2",
       "manifest_sha256": "<패키지 생성 시 출력된 manifest SHA-256>"
     }
   }
@@ -75,6 +75,9 @@ terraform apply release.tfplan
 | `compartment_id`, `project_id`, `instance_id` | 필수 | 같은 구획의 기존 프로젝트·VM |
 | `release_alias`, `app_version` | 필수 | VM 별칭과 설치 후 기대 버전 |
 | `bundle_path`, `bundle_sha256`, `manifest_sha256` | 필수 | 로컬 ZIP과 검증값 |
+| `release_metadata_path` | 선택, null | 검증된 release.json을 ZIP 옆에 저장 |
+| `create_deployment_policy` | 선택, true | 기존 정책 소유자가 권한을 부여하면 false |
+| `additional_pipeline_ids` | 선택, 빈 목록 | 이 정책 소유자가 추가 허용할 정확한 배포 파이프라인 OCID |
 | `profile` | 선택, `DEFAULT` | 로컬 OCI 프로파일 |
 | `name` | 선택, `oci-agent-launchpad` | 리소스 이름 접두사 |
 | `staging_root` | 선택, `/var/ocarun_staging/launchpad` | VM의 전달 경로 |
@@ -87,7 +90,7 @@ Companion에서 해당 리전·구획의 **배포 → 준비된 파이프라인 
 
 DevOps는 ZIP을 전달하고 설치 도구는 root 설정에 고정된 manifest와 모든 파일 체크섬을 확인합니다. 검증한 파일로 새 가상환경을 만들고 인터넷 없이 설치한 뒤 의존성과 앱 버전을 확인합니다. 기존 서비스는 설치가 끝날 때까지 계속 실행하며, 활성화 단계에서는 짧은 재시작이 발생합니다.
 
-`SUCCEEDED`와 `/health`의 기대 버전·`UP`을 확인하세요. [메모리 검증 스크립트](../../../examples/service-desk/scripts/smoke_memory_chat.py)는 기본 0.4.1을 확인하며 다른 버전은 `EXPECTED_VERSION` 환경변수로 지정할 수 있습니다. 이전 버전으로 돌아가는 방법은 [릴리스 복구](../../../deploy/RELEASES.md)를 참고하세요.
+`SUCCEEDED`와 `/health`의 기대 버전·`UP`을 확인하세요. [메모리 검증 스크립트](../../../examples/service-desk/scripts/smoke_memory_chat.py)는 기본 0.4.2를 확인하며 다른 버전은 `EXPECTED_VERSION` 환경변수로 지정할 수 있습니다. 이전 버전으로 돌아가는 방법은 [릴리스 복구](../../../deploy/RELEASES.md)를 참고하세요.
 
 ## 검증과 구현 범위
 
@@ -101,3 +104,11 @@ OCI provider 8.29.0은 업로드 리소스의 `content`를 해시로, 인라인 
 VM 전체 초기화·ADB 사용자/비밀값 배치, 다중 VM 무중단 배포, 앱 데이터 schema 역변환은 포함하지 않습니다. VM에는 설치 관리자 준비가 필요합니다. 버전별 저장소·패키지와 클라우드 리소스는 사용량에 따른 비용이 발생합니다.
 
 근거: [OCI 배포 명세](https://docs.oracle.com/en-us/iaas/Content/devops/using/deployment_specs.htm), [Artifact Registry 개요](https://docs.oracle.com/en-us/iaas/Content/artifacts/overview.htm), [권한별 리소스 작업](https://docs.oracle.com/en-us/iaas/Content/artifacts/iam-policies-verb-resource-type-combinations.htm).
+
+## 정책 개수 한도가 있는 계정
+
+새 릴리스에서 `create_deployment_policy=false`를 사용하고, 기존 정책을 소유한 workspace의 `additional_pipeline_ids`에 새 파이프라인 OCID를 추가합니다. 새 파이프라인 ID는 해당 릴리스의 `pipeline_id` 출력입니다. 정책 소유 workspace의 입력 파일에 추가 값을 지속해서 보관해야 다음 적용에서 권한이 사라지지 않습니다.
+
+기존 정책의 VM과 같은 대상에만 이 재사용 경로를 사용하세요. 다른 VM은 해당 VM의 명령 실행·아티팩트 읽기 권한도 별도로 필요합니다. 기존 상태의 단일 정책 주소는 `moved` 블록으로 `[0]`에 이동하며 삭제·재생성하지 않습니다. 계획에서 기존 권한 유지와 정확한 추가 파이프라인 범위를 확인한 뒤 정책 소유 상태를 적용하고 새 릴리스를 실행합니다. `false`만 설정하면 배포 권한이 자동으로 생기지 않습니다.
+
+2026-11-06 서울 검증에서 테넌시 정책 500개 한도로 새 정책 생성이 거부됐고 이 경로를 적용했습니다. Terraform mock 검사 7개와 기존 정책의 6개 명시적 추가 권한을 확인했습니다.
