@@ -61,7 +61,7 @@ health 성공만으로 메모리를 검증했다고 보지 않습니다. 예제�
 
 ## 실제 검증과 수정한 문제
 
-서울 `Joungmin.Ko`의 `oci-agent-launchpad-bootstrap-vm`은 E5 Flex 1 OCPU·8GB, 50GB 부트 볼륨입니다. 기존 예제 VM과 ADB를 유지하며 기존 ADB ACL에 새 VM의 `/32` 주소만 추가했습니다. 두 VM이 실행 중이므로 추가 VM·디스크 비용이 발생합니다. 신규 VM을 기존 Companion 배포 대상으로 자동 전환하지 않았습니다.
+서울 `Joungmin.Ko`의 `oci-agent-launchpad-bootstrap-vm`은 E5 Flex 1 OCPU·8GB, 50GB 부트 볼륨입니다. 기존 예제 VM과 ADB를 유지하며 기존 ADB ACL에 새 VM의 `/32` 주소만 추가했습니다. 두 VM이 실행 중이므로 추가 VM·디스크 비용이 발생합니다. 후속 검증에서 신규 VM 전용 DevOps 파이프라인을 별도 workspace로 구성하고 Companion 화면에서 재배포 SUCCEEDED, 모니터링 UP / 0.4.1을 확인했습니다. 모니터링은 로컬 터널 8094로 전환했으며 기존 연결은 백업했습니다. [연결 검증과 다음 범위](../docs/companion-agent-platform-review.md)를 참고하세요.
 
 처음 생성 404는 테넌시의 `INSTANCE_CREATE` 거부 조건이 `request.instanceOptions.areLegacyEndpointsDisabled != 'true'`였기 때문입니다. IMDSv2만 허용하도록 `are_legacy_imds_endpoints_disabled = true`를 명시하자 생성에 성공했습니다. 거부 정책을 변경하거나 사용자 권한을 확대하지 않았습니다. SDK 생성 스크립트에도 같은 설정을 반영했습니다.
 

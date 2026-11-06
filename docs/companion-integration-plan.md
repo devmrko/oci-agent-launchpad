@@ -1,6 +1,8 @@
 # OCI Companion과 Python Foundation을 연결하는 계획
 
-기록일: 2026-11-05 | 상태: 예제 구현·로컬 검증 중 | OCI 연결 확인 | SSH 원격 배포 검증 완료·Companion 배포 실행 미검증
+최초 기록: 2026-11-05 | 2026-11-06 업데이트: 새 VM의 Companion 배포·모니터링 검증 완료. 예제 빌드 연계는 남아 있음.
+
+현재 범위와 다음 설계는 [Companion 통합·AgentCore 기능 포함 검토](companion-agent-platform-review.md)를 기준으로 봅니다. 아래의 11월 5일 기능 조사는 당시 상태를 보존한 기록이며 현재 미구현 목록으로 사용하지 않습니다.
 
 ## 사용자가 정한 방향
 

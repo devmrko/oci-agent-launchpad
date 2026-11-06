@@ -6,6 +6,7 @@
 
 현재는 **방법론과 동작하는 파일럿** 단계입니다. Python Foundation 예제를 서울 OCI VM에 배포하고 실제 모델 호출, 승인 후 업무 처리, Oracle Agent Memory 저장·검색을 검증했습니다. 기존 VM의 Companion·DevOps 릴리스 배포·복구와 별도 새 VM의 Vault 기반 설치·재부팅 보존까지 확인했습니다. 새 VM 부팅 검증에는 수정본 관리자 배치가 포함됐으며, 전체 AgentCore 기능 동등성이나 운영 준비 완료를 의미하지 않습니다.
 
+- [Companion 통합과 AgentCore 기능 포함 검토](docs/companion-agent-platform-review.md): 현재 동작, 관리 화면과 실행 서비스의 책임, 빌드 연결 우선순위입니다.
 - [OCI 배포 결과와 접속 절차](deploy/README.md): 새 VM, 원격 검증, Companion 연동 상태입니다.
 - [새 VM 첫 실행과 Vault 연결](deploy/bootstrap-runtime.md): 변수, 설치 흐름, 실제 검증 범위와 운영 제약입니다.
 - [첫 예제 실행](examples/service-desk/README.md): 규정 조회, 승인 후 접수, 기억과 실행 추적을 확인합니다.
