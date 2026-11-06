@@ -47,6 +47,10 @@ def test_full_journey_and_restart(tmp_path):
             )
         assert len(client.get("/api/tickets", headers=headers()).json()) == 1
         assert client.put("/api/memory", headers=headers(), json={"language": "en"}).status_code == 200
+        version = client.get("/health").json()["version"]
+        traces = client.get("/api/traces", headers=headers()).json()
+        assert traces
+        assert all(t["app_version"] == version for t in traces)
     with TestClient(app_for(db)) as client:
         assert len(client.get("/api/tickets", headers=headers()).json()) == 1
         assert client.get("/api/memory", headers=headers()).json() == {"language": "en"}

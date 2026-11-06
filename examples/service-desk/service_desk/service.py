@@ -11,6 +11,7 @@ from python_foundation.database import SqlAlchemyUnitOfWork
 from python_foundation.errors import BusinessError, ErrorCategory, ErrorSpec
 from sqlalchemy.exc import IntegrityError
 
+from . import __version__
 from .models import Record
 from .planning import Decision
 from .repository import DeskRepository
@@ -234,7 +235,7 @@ class DeskService:
                 ],
                 "status": "ok",
                 "elapsed_ms": round((time.perf_counter() - start) * 1000, 2),
-                "app_version": "0.4.1",
+                "app_version": __version__,
             }
         return {
             "answer": answer,
@@ -297,7 +298,7 @@ class DeskService:
                     "status": status,
                     "error_code": error_code,
                     "elapsed_ms": round((time.perf_counter() - start) * 1000, 2),
-                    "app_version": "0.4.1",
+                    "app_version": __version__,
                 },
             )
 
@@ -398,7 +399,7 @@ class DeskService:
                 "session_id": body.session_id,
                 "mode": "explicit-memory",
                 "status": "ok",
-                "app_version": "0.4.1",
+                "app_version": __version__,
                 "memory": {"backend": "oracle-agent-memory", "count": len(items)},
             },
         }

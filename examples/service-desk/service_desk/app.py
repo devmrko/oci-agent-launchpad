@@ -14,6 +14,7 @@ from python_foundation.security import Actor, Security, current_actor
 from python_foundation.settings import FoundationSettings
 from python_foundation.web import install_web
 
+from . import __version__
 from .models import Base
 from .planning import OciPlanner
 from .service import DeskService
@@ -132,7 +133,7 @@ def create_app(*, database_url=None, accounts=None, planner=None, memory_store=N
         if memory_pool is not None:
             memory_pool.close()
 
-    app = FastAPI(title="Service Desk — synthetic example", version="0.4.2", lifespan=lifespan)
+    app = FastAPI(title="Service Desk — synthetic example", version=__version__, lifespan=lifespan)
     install_web(app, Security(settings, verifier=verifier))
     app.state.desk = service
     actor_type = Annotated[Actor, Depends(current_actor)]
@@ -143,7 +144,7 @@ def create_app(*, database_url=None, accounts=None, planner=None, memory_store=N
 
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
-        return {"status": "UP", "version": "0.4.2", "synthetic": True}
+        return {"status": "UP", "version": __version__, "synthetic": True}
 
     @app.get("/api/capabilities")
     def capabilities(actor: actor_type):
