@@ -35,3 +35,11 @@ DevOps 배포 명세는 이 도구의 고정 경로와 검증한 릴리스 별�
 DevOps가 ZIP을 스테이징 경로에 풀어 놓으면 root 전용 설치 도구가 설정에 고정된 manifest SHA-256을 확인한다. 각 파일을 symlink 없이 제한 크기로 root 소유 위치에 복사하며 SHA-256을 확인한다. 검증한 wheel만 오프라인 설치하고 pip check 및 앱 import를 마친 뒤 기존 활성화 도구로 전환한다. 설치 실패 시 새 디렉터리만 정리하고 실행 중 서비스는 건드리지 않는다. 상태 확인 실패 시 기존 활성화 도구가 직전 버전을 복구한다.
 
 기존 VM의 도구·허용 manifest 설정 갱신은 관리자 bootstrap 단계다. IAM·패키지는 Terraform으로 관리하지만 비밀번호·ADB schema 초기화는 이 상태 파일에 포함하지 않는다. 새 VM 전체 초기화와 무중단 배포는 별도 범위다.
+
+## 새 VM 첫 부팅과 비밀값 연결
+
+새 VM은 cloud-init으로 Python 3.12와 bootstrap용 OCI SDK를 설치하고, 소스에 포함된 표준 라이브러리 기반 설치 도구와 비밀값 없는 설정을 배치한다. Instance Principal로 고정 Artifact Registry 파일과 지정 Vault secret 하나를 읽어 최초 앱을 설치한다. 패키지/파일 체크섬을 기존 설치 도구로 검증하고 전용 서비스 사용자·로컬 데모 토큰·systemd를 구성한다. 신규 서비스 첫 실행 실패는 중지로 처리하며, 기존 서비스 자동 덮어쓰기는 거부한다.
+
+ADB ADMIN/owner 자격은 운영자 초기화 도구의 stdin으로만 전달하고 VM IAM에는 ADMIN secret 접근을 주지 않는다. 초기화 결과 중 앱 user/password/DSN/메모리 설정만 Vault에 게시한다. 비밀값은 Terraform 변수·상태·cloud-init·소스에 포함하지 않는다. 새 VM 정책은 정확한 VM principal과 지정 secret OCID로 제한한다. ADB ACL 추가는 기존 허용 주소를 유지하고 신규 VM 주소만 더한다.
+
+검증은 별도 새 VM에서 cloud-init 완료, 첫 health, Vault 읽기, ADB 메모리 저장·조회와 재부팅 후 데이터 유지까지 확인한다. 기존 실행 VM과 ADB 데이터는 유지한다.

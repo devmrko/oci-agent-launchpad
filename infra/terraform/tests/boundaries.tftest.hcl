@@ -25,3 +25,27 @@ run "memory_requires_vault_secret" {
   variables { enable_memory = true }
   expect_failures = [oci_database_autonomous_database.memory]
 }
+run "runtime_bootstrap_uses_references" {
+  command = plan
+  variables {
+    runtime_bootstrap = {
+      artifact_id = "ocid1.genericartifact.oc1.test"
+      artifact_sha256 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      runtime_secret_id = "ocid1.vaultsecret.oc1.test"
+      release_alias = "memory-0.4.1"
+      app_version = "0.4.1"
+      manifest_sha256 = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      model_region = "us-ashburn-1"
+      chat_model = "google.gemini-2.5-flash-lite"
+      embedding_model = "cohere.embed-v4.0"
+    }
+  }
+  assert {
+    condition = length(oci_identity_policy.bootstrap) == 1 && length(local.bootstrap_files) == 7
+    error_message = "Bootstrap requires helper files, non-secret configuration and an exact-principal policy."
+  }
+  assert {
+    condition = !contains(keys(local.bootstrap_configuration), "password") && length(oci_database_autonomous_database.memory) == 0
+    error_message = "An existing runtime secret must not require creating another ADB or embedding passwords."
+  }
+}

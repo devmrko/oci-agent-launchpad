@@ -46,7 +46,7 @@ ADB 없이 실행하려면 `enable_memory=false`로 지정합니다. SSH만 지�
 
 ## 생성 이후와 기존 자원
 
-이 템플릿만으로 앱이 실행되지는 않습니다. 앱 패키지 배포, GenAI IAM 정책, Agent Memory 스키마 초기화·실행 계정 설정, DevOps 파이프라인 및 Companion 등록은 별도 단계입니다. 현재 하드코딩된 예제 스크립트를 새 환경에서 그대로 실행하면 안 됩니다. 다음 작업은 이 단계들의 입력을 Terraform outputs와 릴리스 설정에 연결하는 것입니다.
+기본값은 인프라 생성까지입니다. 선택 입력 `runtime_bootstrap`을 설정하면 검증된 앱 패키지와 Vault 실행 계정을 받아 첫 실행을 시도합니다. [새 VM 첫 실행 안내](../../deploy/bootstrap-runtime.md)의 준비 조건과 검증 한계를 먼저 확인하세요. Agent Memory 스키마 초기화, 기존 ADB의 새 VM IP 허용, DevOps 파이프라인 및 Companion 등록은 별도 단계입니다.
 
 기존 리소스는 별도 state에 import한 뒤 변경 없는 plan을 확인해야 합니다. 지금 템플릿을 apply하면 새 리소스가 생성됩니다. ADB에는 `prevent_destroy`가 있지만 리소스 블록 제거·state 관리 변경까지 막는 보장은 아닙니다. 기존 ADB에 대한 import나 apply는 이번 작업에서 수행하지 않습니다.
 
@@ -54,6 +54,6 @@ ADB 없이 실행하려면 `enable_memory=false`로 지정합니다. SSH만 지�
 
 ## 검증 결과
 
-2026-11-06: Terraform 1.13.5 / OCI provider 8.29.0으로 `fmt`, `validate` 성공. `terraform test`의 모의 공급자 테스트 3개(ADB 비활성화, 전체 공개 SSH 거부, 메모리 Secret 필수) 통과. 테스트에는 Terraform 1.7 이상이 필요합니다. 실제 OCI plan/apply·Resource Manager 실행은 아직 검증하지 않았습니다. 공급자 버전·체크섬은 `.terraform.lock.hcl`에 고정했습니다.
+2026-11-06: Terraform 1.13.5 / OCI provider 8.29.0으로 `fmt`, `validate` 성공. `terraform test`의 모의 공급자 테스트 4개(ADB 비활성화, 전체 공개 SSH 거부, 메모리 Secret 필수, bootstrap 참조값 경계) 통과. 테스트에는 Terraform 1.7 이상이 필요합니다. 실제 plan과 apply를 수행해 네트워크 5개를 생성했으나 VM 생성은 OCI 404로 실패했습니다. 첫 부팅과 Resource Manager 실행은 아직 검증하지 못했습니다. 공급자 버전·체크섬은 `.terraform.lock.hcl`에 고정했습니다.
 
 기존 VM에 버전 패키지를 설치하는 별도 구성은 [패키지 배포 Terraform](release/README.md)을 참고하세요. 이 구성의 VM·ADB 상태와 분리하여 적용합니다.

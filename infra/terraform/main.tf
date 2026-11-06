@@ -70,9 +70,17 @@ resource "oci_core_instance" "runtime" {
     subnet_id        = oci_core_subnet.runtime.id
     assign_public_ip = true
   }
+  agent_config {
+    is_management_disabled = false
+    is_monitoring_disabled = false
+    plugins_config {
+      name          = "Compute Instance Run Command"
+      desired_state = "ENABLED"
+    }
+  }
   metadata = {
     ssh_authorized_keys = var.ssh_public_key
-    user_data           = base64encode("#cloud-config\n${yamlencode({ packages = var.bootstrap_packages })}")
+    user_data           = base64gzip("#cloud-config\n${yamlencode(local.cloud_config)}")
   }
 }
 resource "oci_database_autonomous_database" "memory" {

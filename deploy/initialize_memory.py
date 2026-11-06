@@ -39,18 +39,23 @@ with pool.acquire() as con:
         cur.execute('SELECT TABLE_NAME FROM USER_TABLES')
         for (name,) in cur.fetchall():
             if name.startswith(store_id+'_'):cur.execute(f'GRANT SELECT, INSERT, UPDATE, DELETE ON {name} TO {app_user}')
-            else:cur.execute(f'GRANT SELECT ON {name} TO {app_user}')
+            elif name=='AGENT_MEMORY_STORES':cur.execute(f'GRANT SELECT ON {name} TO {app_user}')
         cur.execute("SELECT OBJECT_NAME,OBJECT_TYPE FROM USER_OBJECTS WHERE OBJECT_TYPE IN ('PROCEDURE','FUNCTION','PACKAGE','SEQUENCE','PROPERTY GRAPH')")
         for name,kind in cur.fetchall():
             if kind=='PROPERTY GRAPH':cur.execute(f'GRANT SELECT ON PROPERTY GRAPH {name} TO {app_user}')
             elif kind=='SEQUENCE':cur.execute(f'GRANT SELECT ON {name} TO {app_user}')
             else:cur.execute(f'GRANT EXECUTE ON {name} TO {app_user}')
 pool.close()
+# Fail before publishing a credential that cannot log in or read its store.
+with oracledb.connect(user=app_user,password=cfg['runtime'],dsn=cfg['dsn']) as con:
+    with con.cursor() as cur:
+        cur.execute(f'SELECT COUNT(*) FROM {owner}.AGENT_MEMORY_STORES')
+        cur.fetchone()
 runtime={k:cfg[k] for k in ['dsn','compartment']};runtime.update(user=app_user,password=cfg['runtime'],schema_owner=owner,store_id=store_id)
 for key in ['embedding_region','embedding_model','embedding_dimensions','namespace']:
     if key in cfg:runtime[key]=cfg[key]
 p=Path(args.output)
-with os.fdopen(os.open(p,os.O_WRONLY|os.O_CREAT|os.O_TRUNC,0o600),'w') as f:json.dump(runtime,f)
+with os.fdopen(os.open(p,os.O_WRONLY|os.O_CREAT|os.O_TRUNC|os.O_NOFOLLOW,0o600),'w') as f:json.dump(runtime,f)
 import pwd
 os.chown(p,pwd.getpwnam(args.service_user).pw_uid,pwd.getpwnam(args.service_user).pw_gid)
 print('Memory schema initialized; runtime credential configured.')
