@@ -74,6 +74,40 @@ release Terraform의 선택 입력 `post_deploy_check_command`로 VM에 사전 �
 }
 ```
 
-`launchpad-check`는 연결 계약을 설명하는 예시 이름이다. 아직 이 래퍼의 설치·자격 증명 연결·sudoers 등록을 자동화하지 않았으므로 현재 실행 환경에는 이 옵션을 활성화하지 않았다. VM 등록 도구의 입력 검증 모듈도 새 옵션을 아는 동일 버전으로 배포해야 한다. 미지원 구버전은 알 수 없는 설정 키로 거부한다.
+`launchpad-check`는 아래 관리자 래퍼로 구현했고 실제 VM에 설치해 ocarun 실행까지 검증했다. 기존 불변 파이프라인에는 옵션을 소급 활성화하지 않았다. 새 릴리스의 명세에서 이 옵션을 사용한다. VM 등록 도구의 입력 검증 모듈도 새 옵션을 아는 동일 버전으로 배포해야 한다. 미지원 구버전은 알 수 없는 설정 키로 거부한다.
 
 2026-11-07 후속 검사 연결의 Terraform mock 테스트 11개, 준비·등록·통합 실행·IAM 관련 Python 테스트 67개가 통과했다. 현재 실제 release workspace의 기본 옵션 계획은 종료 코드 0, `No changes`였다. 후속 검사 활성화 경로는 명세 생성과 입력 전달까지 검증했으며 실제 DevOps 실행 검증은 아직 하지 않았다.
+
+## VM 관리자 래퍼 설계
+
+`run_deployment_check.py`는 root 전용이며 `/etc/launchpad-check.json`의 허용 별칭만 받는다. 기대 버전·포트·실행 파일은 기존 `/etc/launchpad-deployment.json`에서 읽는다. 검사를 시작하기 전에 같은 배포 잠금을 잡고 systemd의 실제 ExecStart가 선택한 릴리스의 Python인지 확인한다. 다른 버전을 검사하거나 검사 중 배포가 전환되는 것을 막는다.
+
+검증 설정과 자격 증명 파일은 root 소유·비소유자 쓰기 금지 경로이며 파일 권한은 0600이어야 한다. 검증 Python과 스크립트도 root 제어 경로여야 한다. 자식 프로세스는 제한된 환경변수와 stdin 자격 증명으로 실행하고, stderr나 원본 실패 응답을 출력하지 않는다. 실패·시간 초과·잘못된 결과는 종료 코드 1로 처리한다.
+
+별도 `/etc/sudoers.d/launchpad-check`는 정확한 `/usr/local/sbin/launchpad-check <별칭>`만 ocarun에게 허용한다. 기존 설치·활성화 sudoers는 건드리지 않는다. 설정에 등록되지 않은 별칭과 명령행 URL·비밀 파일 경로 변경을 허용하지 않는다. 새 릴리스마다 이 검사 허용 목록도 갱신해야 하며, 이 단계에서는 기존 배포 파이프라인을 변경하지 않는다.
+
+### 관리자 래퍼의 설정과 검증 결과
+
+`/etc/launchpad-check.json` 예시(실제 파일은 root:root 0600):
+
+```json
+{
+  "allowed_releases": ["memory-0.5.0-329179a5f71d"],
+  "credentials_file": "/etc/launchpad-check-credentials.json",
+  "timeout_seconds": 240
+}
+```
+
+credentials_file은 앞서 설명한 stdin JSON 형식이며 root:root 0600으로 준비한다. 기존 데모 계정 중 `subject=demo-user`를 명시적으로 선택해 연결했고 토큰은 출력하지 않았다. 자격 증명을 회전하면 이 파일도 갱신해야 한다. 검증 프로세스의 최대 시간은 240초이며 Terraform 후속 단계의 300초보다 짧게 둔다.
+
+실제 VM에는 `/usr/local/lib/launchpad-checks`에 검증 CLI·런타임 검사·관리자 래퍼 및 공통 검증 모듈을 설치했다. `/usr/local/sbin/launchpad-check`는 `/usr/bin/python3.12 -E -s`로 관리자 래퍼를 호출한다. 자식 검사도 사용자 site와 Python 환경변수를 무시하며 신뢰한 스크립트 디렉터리의 check_runtime만 불러온다.
+
+관리자는 `run_deployment_check.py --sudoers`로 정확한 허용 명령 목록을 생성하고 `visudo -cf`로 검사한 뒤 별도 sudoers 파일에 반영한다. 이 옵션 자체는 ocarun에 허용하지 않는다. 초기 설치·자격 증명 배치는 이번 VM에서 관리자 작업으로 수행했으며 범용 설치 CLI는 아직 없다.
+
+2026-11-07 관리자 래퍼 및 관측 검사 테스트 21개가 통과했다. 실제 VM에서 다음 명령을 실행해 PASS를 확인했다.
+
+```sh
+sudo -u ocarun sudo -n /usr/local/sbin/launchpad-check memory-0.5.0-329179a5f71d
+```
+
+결과에는 활성 릴리스·모델/메모리·Langfuse 입출력·메모리 본문 제외 검사와 관측 5개만 출력됐다. 다른 별칭 `memory-0.4.2`, 관리자 `--sudoers` 옵션, 검증 자격 증명 파일 읽기는 ocarun에서 모두 거부됐다. 기존 설치/활성화 sudoers는 유지했다. 이는 실제 Run Command 사용자로 실행한 검증이며 후속 단계가 포함된 새 DevOps 배포 실행을 검증한 것은 아니다.
