@@ -81,3 +81,23 @@ def test_tampered_build_creates_no_output(result,inputs,tmp_path):
     with (result/'release.zip').open('ab') as f:f.write(b'changed')
     with pytest.raises(ValueError,match='checksum'):call(result,inputs,tmp_path/'out')
     assert not (tmp_path/'out').exists()
+
+
+def test_optional_verifier_survives_preparation(result, inputs, tmp_path):
+    base=json.loads(inputs[0].read_text())
+    base.update(post_deploy_check_command='/usr/local/sbin/launchpad-check',post_deploy_check_timeout_seconds=120)
+    inputs[0].write_text(json.dumps(base))
+    out=tmp_path/'prepared';call(result,inputs,out)
+    actual=json.loads((out/'release.tfvars.json').read_text())
+    assert actual['post_deploy_check_command']==base['post_deploy_check_command']
+    assert actual['post_deploy_check_timeout_seconds']==120
+
+
+@pytest.mark.parametrize('field,value', [('post_deploy_check_command','/usr/local/sbin/check;id'),
+    ('post_deploy_check_command','/tmp/check'),('post_deploy_check_timeout_seconds',True),
+    ('post_deploy_check_timeout_seconds',601)])
+def test_invalid_verifier_fails_before_output(result, inputs, tmp_path, field, value):
+    base=json.loads(inputs[0].read_text());base[field]=value;inputs[0].write_text(json.dumps(base))
+    out=tmp_path/'prepared'
+    with pytest.raises(ValueError,match='verifier'):call(result,inputs,out)
+    assert not out.exists()

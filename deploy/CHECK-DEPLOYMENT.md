@@ -56,3 +56,24 @@ python examples/service-desk/scripts/check_deployment.py \
 실제 서울 VM의 새 릴리스에서 stdin으로 기존 자격 증명을 전달한 CLI 실행이 PASS였다. 앱 버전 0.5.0, 인증·실제 OCI 모델·세션 간 Oracle Agent Memory 검사, Langfuse 관측 5개·채팅 입출력·메모리 본문 제외를 확인했다. 근거 파일은 비공개 `.run/oci-launchpad/check-deployment-reusable.json`이다. 실제 고트래픽 다중 페이지 검증은 하지 않았고, 페이지 전환은 HTTP 테스트 대역으로 검증했다.
 
 이 도구는 service-desk 합성 시나리오의 배포 확인용이며 범용 에이전트 평가나 지속 모니터링을 대체하지 않는다. 앱이 보고하는 버전만으로 실행 파일 경로까지 증명하지 않으므로 동일 버전 재배포 시 systemd ExecStart 같은 실행 경로도 별도 확인한다. 임시 검증 스크립트 대신 이 저장소의 버전 관리된 도구를 다음 배포에서 사용한다.
+
+## 파이프라인 후속 검사 연결 계약
+
+release Terraform의 선택 입력 `post_deploy_check_command`로 VM에 사전 설치한 관리자 검증 래퍼를 지정한다. 값은 `/usr/local/sbin/` 아래 실행 파일의 절대 경로만 받으며 인라인 shell·인자·비밀값을 받지 않는다. 배포 명세는 설치·활성화 다음에 `sudo -n <경로> <릴리스 별칭>`을 실행한다. 래퍼는 root 소유 설정에서 별칭에 해당하는 기대 버전·합성 계정·Langfuse 연결을 찾아 위 CLI를 호출해야 한다.
+
+기본값 null이면 후속 검사는 생략되어 기존 명세를 유지한다. `post_deploy_check_timeout_seconds` 기본값은 300초다. 검사 실패/시간 초과는 DevOps 배포 실패로 처리되지만 이미 활성화된 앱을 자동 롤백하지 않는다. 기존 활성화 단계의 health 실패 롤백과 별개다. 원인을 확인한 뒤 검사를 재실행하거나 이전 파이프라인으로 복구한다.
+
+래퍼 설치 및 ocarun의 정확한 명령·별칭별 sudoers 허용이 선행되어야 한다. 이 Terraform 옵션 자체는 VM 파일이나 sudoers를 설치하지 않는다. 새 릴리스 workspace에서만 설정하며 기존 불변 배포 명세를 변경하지 않는다. Companion에는 명령 이름·앱 계정·Langfuse 비밀값을 넣지 않는다.
+
+새 릴리스의 기본 변수에 다음 값을 추가하면 준비 도구가 검증한 후 Terraform 변수로 전달한다.
+
+```json
+{
+  "post_deploy_check_command": "/usr/local/sbin/launchpad-check",
+  "post_deploy_check_timeout_seconds": 300
+}
+```
+
+`launchpad-check`는 연결 계약을 설명하는 예시 이름이다. 아직 이 래퍼의 설치·자격 증명 연결·sudoers 등록을 자동화하지 않았으므로 현재 실행 환경에는 이 옵션을 활성화하지 않았다. VM 등록 도구의 입력 검증 모듈도 새 옵션을 아는 동일 버전으로 배포해야 한다. 미지원 구버전은 알 수 없는 설정 키로 거부한다.
+
+2026-11-07 후속 검사 연결의 Terraform mock 테스트 11개, 준비·등록·통합 실행·IAM 관련 Python 테스트 67개가 통과했다. 현재 실제 release workspace의 기본 옵션 계획은 종료 코드 0, `No changes`였다. 후속 검사 활성화 경로는 명세 생성과 입력 전달까지 검증했으며 실제 DevOps 실행 검증은 아직 하지 않았다.

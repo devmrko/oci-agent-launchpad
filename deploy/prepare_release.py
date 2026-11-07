@@ -12,7 +12,8 @@ from verify_release import deployment_inputs, validate_result
 
 BASE_KEYS = {'region', 'home_region', 'compartment_id', 'project_id', 'instance_id',
              'profile', 'name', 'staging_root', 'create_deployment_policy', 'additional_pipeline_ids',
-             'bundle_path', 'bundle_sha256', 'manifest_sha256', 'release_alias', 'app_version', 'release_metadata_path'}
+             'bundle_path', 'bundle_sha256', 'manifest_sha256', 'release_alias', 'app_version', 'release_metadata_path',
+             'post_deploy_check_command', 'post_deploy_check_timeout_seconds'}
 CONFIG_KEYS = {'service', 'release_root', 'port', 'health_timeout_seconds', 'staging_root', 'releases'}
 
 
@@ -43,6 +44,12 @@ def settings(base, config):
     # A new release must not silently become an owner of old release policies.
     if base.get('additional_pipeline_ids'):
         raise ValueError('Use a release target input, not a shared policy owner input')
+    command = base.get('post_deploy_check_command')
+    if command is not None and (not isinstance(command, str) or not re.fullmatch(r'/usr/local/sbin/[A-Za-z0-9_-]+', command)):
+        raise ValueError('Invalid post-deployment verifier path')
+    timeout = base.get('post_deploy_check_timeout_seconds', 300)
+    if type(timeout) is not int or not 30 <= timeout <= 600:
+        raise ValueError('Invalid post-deployment verifier timeout')
     staging = config.get('staging_root')
     if not isinstance(staging, str) or not re.fullmatch(r'/[A-Za-z0-9_/-]+', staging) or '..' in Path(staging).parts:
         raise ValueError('Invalid staging root')

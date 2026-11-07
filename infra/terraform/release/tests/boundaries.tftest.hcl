@@ -73,3 +73,29 @@ run "exact_additional_principal" {
     error_message = "Additional grants must name the exact pipeline."
   }
 }
+
+run "post_check_disabled_preserves_single_step" {
+  command = plan
+  assert {
+    condition = length(yamldecode(local.deployment_spec).steps) == 1 && yamldecode(local.deployment_spec).timeoutInSeconds == 900
+    error_message = "Default deployment must preserve the original single step."
+  }
+}
+run "post_check_after_activation" {
+  command = plan
+  variables { post_deploy_check_command = "/usr/local/sbin/launchpad-check" }
+  assert {
+    condition = length(yamldecode(local.deployment_spec).steps) == 2 && yamldecode(local.deployment_spec).steps[1].command == "set -eu\nsudo -n /usr/local/sbin/launchpad-check memory-0.4.1" && yamldecode(local.deployment_spec).timeoutInSeconds == 1200
+    error_message = "Verifier must follow activation and receive only the pinned alias."
+  }
+}
+run "reject_inline_check_command" {
+  command = plan
+  variables { post_deploy_check_command = "/usr/local/sbin/check;id" }
+  expect_failures = [var.post_deploy_check_command]
+}
+run "reject_check_timeout" {
+  command = plan
+  variables { post_deploy_check_timeout_seconds = 601 }
+  expect_failures = [var.post_deploy_check_timeout_seconds]
+}

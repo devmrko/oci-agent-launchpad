@@ -2,10 +2,15 @@ locals {
   deployment_spec = yamlencode({
     version          = "1.0"
     component        = "deployment"
-    timeoutInSeconds = 900
+    timeoutInSeconds = 900 + (var.post_deploy_check_command == null ? 0 : var.post_deploy_check_timeout_seconds)
     files            = [{ source = "/", destination = "${var.staging_root}/${var.release_alias}" }]
-    steps = [{ stepType = "Command", name = "Verify install and activate", timeoutInSeconds = 720,
-    command = "set -eu\nsudo -n /usr/local/sbin/launchpad-deploy ${var.release_alias}" }]
+    steps = concat([{ stepType = "Command", name = "Verify install and activate", timeoutInSeconds = 720,
+      command = "set -eu\nsudo -n /usr/local/sbin/launchpad-deploy ${var.release_alias}" }],
+      var.post_deploy_check_command == null ? [] : [{
+        stepType         = "Command", name = "Post-deployment verification",
+        timeoutInSeconds = var.post_deploy_check_timeout_seconds,
+        command          = "set -eu\nsudo -n ${var.post_deploy_check_command} ${var.release_alias}"
+    }])
   })
 }
 terraform {

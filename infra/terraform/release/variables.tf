@@ -63,3 +63,21 @@ variable "additional_pipeline_ids" {
     error_message = "Use exact deployment pipeline OCIDs."
   }
 }
+
+variable "post_deploy_check_command" {
+  type        = string
+  default     = null
+  description = "Optional preinstalled root-owned verifier under /usr/local/sbin; receives release alias. No inline shell or secrets."
+  validation {
+    condition     = var.post_deploy_check_command == null ? true : can(regex("^/usr/local/sbin/[A-Za-z0-9_-]+$", var.post_deploy_check_command))
+    error_message = "Use a single executable path under /usr/local/sbin without arguments."
+  }
+}
+variable "post_deploy_check_timeout_seconds" {
+  type    = number
+  default = 300
+  validation {
+    condition     = var.post_deploy_check_timeout_seconds >= 30 && var.post_deploy_check_timeout_seconds <= 600 && floor(var.post_deploy_check_timeout_seconds) == var.post_deploy_check_timeout_seconds
+    error_message = "Verification timeout must be an integer from 30 to 600 seconds."
+  }
+}

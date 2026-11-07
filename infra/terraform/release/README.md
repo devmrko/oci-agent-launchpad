@@ -91,6 +91,8 @@ terraform apply release.tfplan
 | `profile` | 선택, `DEFAULT` | 로컬 OCI 프로파일 |
 | `name` | 선택, `oci-agent-launchpad` | 리소스 이름 접두사 |
 | `staging_root` | 선택, `/var/ocarun_staging/launchpad` | VM의 전달 경로 |
+| `post_deploy_check_command` | 선택, null | 사전 설치한 `/usr/local/sbin/` 검증 래퍼 경로 |
+| `post_deploy_check_timeout_seconds` | 선택, 300 | 후속 검사 제한 시간(30~600초) |
 
 Terraform은 파일 SHA-256과 실제 업로드 SHA-256을 비교합니다. 패키지와 저장소는 삭제 방지 설정이 있습니다. **이 상태는 한 불변 릴리스를 관리합니다.** 새 버전은 별도 Terraform workspace/state로 구성하고 이전 상태·리소스를 유지하세요. 같은 버전의 ZIP을 바꿔 덮어쓰지 않습니다.
 
@@ -124,3 +126,5 @@ VM 전체 초기화·ADB 사용자/비밀값 배치, 다중 VM 무중단 배포,
 기존 정책의 VM과 같은 대상에만 이 재사용 경로를 사용하세요. 다른 VM은 해당 VM의 명령 실행·아티팩트 읽기 권한도 별도로 필요합니다. 기존 상태의 단일 정책 주소는 `moved` 블록으로 `[0]`에 이동하며 삭제·재생성하지 않습니다. 계획에서 기존 권한 유지와 정확한 추가 파이프라인 범위를 확인한 뒤 정책 소유 상태를 적용하고 새 릴리스를 실행합니다. `false`만 설정하면 배포 권한이 자동으로 생기지 않습니다.
 
 2026-11-06 서울 검증에서 테넌시 정책 500개 한도로 새 정책 생성이 거부됐고 이 경로를 적용했습니다. Terraform mock 검사 7개와 기존 정책의 6개 명시적 추가 권한을 확인했습니다.
+
+후속 기능 검사를 연결할 때는 [검증 래퍼 계약과 준비 상태](../../../deploy/CHECK-DEPLOYMENT.md)를 먼저 확인하세요. 실패하면 배포는 실패로 표시되지만 이미 활성화한 앱의 자동 롤백을 의미하지 않습니다.
