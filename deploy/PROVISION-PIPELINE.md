@@ -64,3 +64,5 @@ VM의 systemd ExecStart가 `/opt/launchpad/releases/memory-0.5.0-329179a5f71d/ve
 새 프로세스에서 합성 데이터로 인증된 capabilities, 실제 OCI 모델 호출·버전별 trace, Oracle Agent Memory의 세션 간 기억 저장·조회가 모두 PASS였다. 비공개 VCN/LB 경로의 Langfuse API에서 해당 요청의 관측 기록 5개를 확인했다. 채팅 입력·출력은 기록됐고 메모리 검색 본문은 input/output에서 제외됐다. 이 검증은 해당 합성 요청의 결과이며 모든 업무 시나리오·장애 복구·운영 규모를 보장하지 않는다.
 
 실행 근거는 비공개 `.run/oci-launchpad/provision-execute-050`의 progress.json, Terraform 로그, after-release.log, after-iam.log, `.run/oci-launchpad/deployment-run-050-integrated.json`, `validation-050-integrated.json` 및 Companion 로컬 검증 결과다. 준비·계획 파일과 상태에는 운영 정보가 있어 공개 문서에 복사하지 않는다.
+
+배포 후 반복 검증은 [앱·메모리·Langfuse 통합 확인](CHECK-DEPLOYMENT.md)의 버전 관리된 CLI를 사용한다. 이 도구는 배포 실행과 독립적이므로 Companion 배포 완료 후 운영 검사로 연결할 수 있다. 현재 Companion이 자동 실행하는 기능은 아니다.
