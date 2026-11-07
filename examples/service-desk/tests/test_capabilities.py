@@ -13,7 +13,7 @@ def test_capabilities_require_auth_and_report_missing_features(tmp_path, monkeyp
         response = client.get('/api/capabilities', headers=headers())
         assert response.status_code == 200
         data = response.json()
-        assert data['app_version'] == client.get('/health').json()['version'] == '0.5.0'
+        assert data['app_version'] == client.get('/health').json()['version'] == '0.6.0'
         assert data['schema_version'] == 1
         capabilities = data['capabilities']
         assert len(capabilities) == 9
