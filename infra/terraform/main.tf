@@ -53,6 +53,7 @@ resource "oci_core_subnet" "runtime" {
   display_name      = "${var.name}-subnet"
 }
 resource "oci_core_instance" "runtime" {
+  depends_on = [terraform_data.runtime_capacity]
   compartment_id      = var.compartment_id
   availability_domain = var.availability_domain
   display_name        = "${var.name}-vm"

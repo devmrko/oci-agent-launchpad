@@ -1,6 +1,6 @@
 # 설치와 배포 전에 필요한 용량 계산하기
 
-OCI 엔지니어가 기본 스택을 설치하고 업데이트·복구까지 수행할 공간을 먼저 확보하도록 하는 설계와 검사 도구다. 파일시스템 크기는 설치 완료 크기만으로 정하지 않는다. **2026-11-08 현재 계산·사전 검사 CLI 구현 단계이며 Terraform·Companion 자동 연결은 아직 없다.**
+OCI 엔지니어가 기본 스택을 설치하고 업데이트·복구까지 수행할 공간을 먼저 확보하도록 하는 설계와 검사 도구다. 파일시스템 크기는 설치 완료 크기만으로 정하지 않는다. **2026-11-08 현재 Terraform과 컨테이너 준비 단계에 연결했으며 Companion UI 연결은 아직 없다.**
 
 ## 이번 확인에서 배운 점
 
@@ -47,10 +47,28 @@ python deploy/capacity_plan.py --plan /protected/build-capacity.json --path /var
 
 ## 다음 연결 작업
 
-1. Terraform 적용 전 계획 총량을 boot/data volume 입력에 반영하고 부족한 값을 거부한다. 현재 root Terraform에는 boot_volume_gb 입력이 있지만 이 계산과의 연결은 아직 없다.
+1. Terraform 적용 전 계획 총량을 boot/data volume 입력에 반영하고 부족한 값을 거부한다. root Terraform의 runtime_capacity_plan은 필수이며, 산정 하한보다 작은 boot_volume_gb를 계획 단계에서 거부한다. VM은 검사 자원에 의존한다.
 2. 빌드 시작 전 작업 디렉터리·Docker data root·임시 디렉터리의 실제 마운트를 확인하고 같은 장치는 합산한다. CPU·RAM 사용 예산과 동시성도 별도 점검한다. 이 CLI는 디스크 계산만 수행한다.
 3. OKE는 노드 OS·container runtime·이미지 보관·업데이트 중 추가 Pod 공간을 노드별로 산정한다. Pod의 ephemeral-storage requests/limits와 PVC의 데이터 용량은 분리한다. PVC를 늘려도 이미지 레이어 공간은 늘지 않는다.
 4. 로그·이미지·이전 릴리스 보관 정책을 명시하고, 복구용 버전을 무작정 삭제해 공간을 맞추지 않는다. 용량·inode·I/O·메모리 경보를 별도로 구성한다.
 5. Companion은 필수값, 산정 근거, 부족한 자원과 확장 방법을 표시하는 범용 사전 점검으로 연결한다. 현재는 계획이며 자동 적용 기능으로 표시하지 않는다.
 
 기존 관측 서버에서 앱 빌드를 실행하는 작업은 이 공존 예산 확인 전까지 진행하지 않는다. 이후에는 전용 OCI DevOps 빌드 러너를 우선 사용한다. [OKE 설계](OKE-DESIGN.md)와 [컨테이너 Dockerfile](container/Dockerfile)을 함께 참고한다.
+
+## 실제 실행 경로에 연결된 검사
+
+root Terraform에는 위 JSON을 `runtime_capacity_plan` 키 아래 넣은 tfvars를 제공한다. 기존 환경도 다음 계획부터 이 입력이 필요하며, 누락 시 자동으로 임의 예산을 채우지 않는다. 비대화형 실행은 `-input=false`로 누락을 즉시 확인한다. 총 GiB 예산을 보수적으로 decimal GB로 변환해 boot_volume_gb와 대조한다. OCI 플랫폼 이미지의 최소 크기와 실제 게스트 파일시스템 크기는 별도 확인한다. 이번 변경으로 기존 볼륨을 실제 확장하거나 클라우드 자원을 생성하지 않았다.
+
+컨테이너 준비 도구도 용량 계획을 필수로 받는다. 출력 디렉터리가 생길 파일시스템을 검사한 뒤 ZIP을 풀며, 계획이 실제 ZIP 비압축 크기와 여유분보다 작아도 거부한다. 이 검사는 컨텍스트 추출 공간에 대한 것이며 다른 서버의 Docker data root나 빌드 실행 공간 검사를 대신하지 않는다.
+
+```sh
+python deploy/prepare_container.py \
+  --result /protected/verified-release \
+  --output /work/new-container-context \
+  --base-image 'docker.io/library/python@sha256:<검증한-64자리-digest>' \
+  --capacity-plan /protected/context-capacity.json
+```
+
+Python 관련 검사 22개와 Terraform mock 계획 검사 6개가 통과했다. 실제 공간 부족을 테스트 대역으로 공급했을 때 출력 디렉터리가 만들어지지 않는 것도 확인했다. 실제 디스크를 가득 채우는 시험이나 컨테이너 빌드의 최고 사용량 실측은 하지 않았다. Companion 표시·Docker 빌드 사전 검사·OKE 노드 자원 연결은 남은 작업이다.
+
+기존 `deploy/provision_demo.py` SDK 경로도 같은 `runtime_capacity_plan`과 명시적인 정수 `boot_volume_gb`를 요구한다. 고정 50GB 할당을 제거했으며 잘못된 입력에서는 OCI 프로파일 조회·클라이언트 생성·리소스 생성 전에 실패한다. 기존 VM의 실제 볼륨을 자동으로 확장하지는 않는다. 이 실패 순서는 스크립트 전체 진입 테스트로 확인했다.

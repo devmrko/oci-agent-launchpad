@@ -48,6 +48,15 @@ def calculate(plan):
             'required_free_gib': additional}
 
 
+def validate_provisioning(spec):
+    report = calculate(spec['runtime_capacity_plan'])
+    volume = spec.get('boot_volume_gb')
+    required = math.ceil(report['required_filesystem_gib'] * GIB / 1_000_000_000)
+    if type(volume) is not int or volume < required:
+        raise ValueError(f'boot_volume_gb must be an integer >= {required} for this capacity plan')
+    return report
+
+
 def check(plan, path):
     result = calculate(plan)
     usage = shutil.disk_usage(path)

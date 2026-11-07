@@ -36,3 +36,32 @@ def test_invalid_budget_rejected(value):
 def test_missing_assumptions_rejected():
     data = plan(); data['components'][0]['basis'] = ''
     with pytest.raises(ValueError): calculate(data)
+
+
+def test_sdk_provisioning_rejects_budget_before_any_oci_access(tmp_path, monkeypatch):
+    import json
+    import runpy
+    from types import SimpleNamespace, ModuleType
+    from unittest.mock import Mock
+    import sys
+    config = tmp_path / 'config.json'
+    config.write_text(json.dumps({'runtime_capacity_plan': plan(), 'boot_volume_gb': 10}))
+    api = Mock(side_effect=AssertionError('OCI must not be contacted'))
+    fake = ModuleType('oci')
+    fake.config = SimpleNamespace(from_file=api)
+    core = ModuleType('oci.core'); core.models = SimpleNamespace()
+    fake.core = core
+    monkeypatch.setitem(sys.modules, 'oci', fake)
+    monkeypatch.setitem(sys.modules, 'oci.core', core)
+    monkeypatch.setattr(sys, 'argv', ['provision_demo.py', '--config', str(config), '--state', str(tmp_path / 'state.json')])
+    with pytest.raises(ValueError, match='boot_volume_gb'):
+        runpy.run_path(str(Path(__file__).parents[1] / 'provision_demo.py'), run_name='__main__')
+    api.assert_not_called()
+    assert not (tmp_path / 'state.json').exists()
+
+
+def test_provisioning_conversion_matches_terraform():
+    from capacity_plan import validate_provisioning
+    with pytest.raises(ValueError):
+        validate_provisioning({'runtime_capacity_plan': plan(), 'boot_volume_gb': 37})
+    assert validate_provisioning({'runtime_capacity_plan': plan(), 'boot_volume_gb': 38})['required_filesystem_gib'] == 35

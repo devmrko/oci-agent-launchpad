@@ -9,6 +9,7 @@ import uuid
 from pathlib import Path
 
 import oci
+from capacity_plan import validate_provisioning
 from oci.core import models as m
 
 p = argparse.ArgumentParser()
@@ -16,6 +17,7 @@ p.add_argument("--config", required=True)
 p.add_argument("--state", required=True)
 a = p.parse_args()
 spec = json.loads(Path(a.config).read_text())
+validate_provisioning(spec)  # Before any OCI client, lookup or resource creation.
 state_path = Path(a.state)
 state = json.loads(state_path.read_text()) if state_path.exists() else {}
 config = oci.config.from_file(profile_name=spec.get("profile", "DEFAULT"))
@@ -179,7 +181,7 @@ instance = create(
             shape="VM.Standard.E5.Flex",
             shape_config=m.LaunchInstanceShapeConfigDetails(ocpus=1, memory_in_gbs=8),
             source_details=m.InstanceSourceViaImageDetails(
-                image_id=spec["image_id"], boot_volume_size_in_gbs=50
+                image_id=spec["image_id"], boot_volume_size_in_gbs=spec["boot_volume_gb"]
             ),
             create_vnic_details=m.CreateVnicDetails(
                 subnet_id=subnet, assign_public_ip=True
