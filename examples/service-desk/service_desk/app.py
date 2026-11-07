@@ -1,6 +1,8 @@
 import json
+import hashlib
 import os
 import secrets
+import time
 from contextlib import asynccontextmanager
 from typing import Annotated, Literal
 
@@ -79,7 +81,7 @@ def model_planner(message):
         ) from failure
 
 
-def create_app(*, database_url=None, accounts=None, planner=None, memory_store=None):
+def create_app(*, database_url=None, accounts=None, planner=None, memory_store=None, telemetry=None):
     mode = os.environ.get("DESK_AUTH_MODE", "demo")
     if accounts is not None or mode == "demo":
         settings = FoundationSettings(
@@ -123,10 +125,14 @@ def create_app(*, database_url=None, accounts=None, planner=None, memory_store=N
     )
 
     service.memory_store = memory_store
+    from .observability import ChatTelemetry, capture_stage
+    telemetry = telemetry if telemetry is not None else ChatTelemetry.from_env()
 
     @asynccontextmanager
     async def lifespan(app):
         yield
+        if telemetry is not None:
+            telemetry.close()
         engine.dispose()
         if memory_client is not None:
             memory_client.close()
@@ -136,6 +142,8 @@ def create_app(*, database_url=None, accounts=None, planner=None, memory_store=N
     app = FastAPI(title="Service Desk — synthetic example", version=__version__, lifespan=lifespan)
     install_web(app, Security(settings, verifier=verifier))
     app.state.desk = service
+    from .monitoring import install as install_monitoring
+    install_monitoring(app, service)
     actor_type = Annotated[Actor, Depends(current_actor)]
 
     @app.get("/health")
@@ -176,11 +184,51 @@ def create_app(*, database_url=None, accounts=None, planner=None, memory_store=N
 
     @app.post("/api/chat")
     def chat(body: Chat, actor: actor_type, request: Request):
-        return service.chat(actor, body.session_id, body.message, request.state.request_id)
+        started = time.time_ns()
+        stages = [] if telemetry is not None else None
+        result, error = None, None
+        try:
+            result = service.chat(actor, body.session_id, body.message, request.state.request_id, stages=stages)
+            return result
+        except Exception as failure:
+            error = getattr(getattr(failure, "error", None), "code", type(failure).__name__)
+            raise
+        finally:
+            if telemetry is not None:
+                try:
+                    telemetry.record(body.message, result or {"trace": {"request_id": request.state.request_id}},
+                                     started, stages=stages or (), error=error,
+                                     suppress_content=service.memory_command(body.message) is not None)
+                except Exception:
+                    import logging
+                    logging.getLogger(__name__).warning("telemetry_record_failed")
 
     @app.post("/api/proposals/{proposal_id}/approve")
     def approve(proposal_id: str, body: Approval, actor: actor_type, request: Request):
-        return service.approve(actor, proposal_id, request.state.request_id)
+        started = time.time_ns()
+        stages, result, error = [], None, None
+        # Stable pseudonymous reference ties repeated submissions together without proposal text.
+        proposal_ref = hashlib.sha256(proposal_id.encode()).hexdigest()
+        summary = None
+        try:
+            with capture_stage(stages if telemetry is not None else None, "tool.approve", "tool") as stage:
+                result = service.approve(actor, proposal_id, request.state.request_id)
+                summary = {"status": result["status"], "ticket_ref": hashlib.sha256(result["ticket_id"].encode()).hexdigest()}
+                stage["input"] = {"confirmed": True, "proposal_ref": proposal_ref}
+                stage["output"] = summary
+            return result
+        except Exception as failure:
+            error = getattr(getattr(failure, "error", None), "code", type(failure).__name__)
+            raise
+        finally:
+            if telemetry is not None:
+                try:
+                    telemetry.record("", {"trace": {"request_id": request.state.request_id, "mode": "user-approval"}},
+                                     started, stages=stages, error=error, operation="approve",
+                                     input_data={"confirmed": True, "proposal_ref": proposal_ref}, output_data=summary)
+                except Exception:
+                    import logging
+                    logging.getLogger(__name__).warning("telemetry_record_failed")
 
     @app.get("/api/tools")
     def tool_catalog(actor: actor_type):
@@ -194,13 +242,37 @@ def create_app(*, database_url=None, accounts=None, planner=None, memory_store=N
     def traces(actor: actor_type):
         return service.listing(actor, "trace")
 
+    def observed_memory(body, actor, request, *, save=False):
+        started = time.time_ns()
+        operation = "memory-save" if save else "memory-search"
+        stages, result, error = [], None, None
+        trace = {"request_id": request.state.request_id, "mode": "explicit-memory"}
+        try:
+            with capture_stage(stages, "tool." + operation, "tool") as stage:
+                result = service.durable_memory(actor, body, request.state.request_id, save=save)
+                count = len(result["items"])
+                stage["memory_count"] = count
+                trace["memory"] = {"count": count}
+            return result
+        except Exception as failure:
+            error = getattr(getattr(failure, "error", None), "code", type(failure).__name__)
+            raise
+        finally:
+            if telemetry is not None:
+                try:
+                    telemetry.record("", {"trace": trace}, started, stages=stages,
+                                     error=error, operation=operation, suppress_content=True)
+                except Exception:
+                    import logging
+                    logging.getLogger(__name__).warning("telemetry_record_failed")
+
     @app.post("/api/memories")
     def save_durable_memory(body: MemoryInput, actor: actor_type, request: Request):
-        return service.durable_memory(actor, body, request.state.request_id, save=True)
+        return observed_memory(body, actor, request, save=True)
 
     @app.post("/api/memories/search")
     def search_durable_memory(body: MemoryQuery, actor: actor_type, request: Request):
-        return service.durable_memory(actor, body, request.state.request_id)
+        return observed_memory(body, actor, request)
 
     @app.get("/api/memory")
     def memory(actor: actor_type):

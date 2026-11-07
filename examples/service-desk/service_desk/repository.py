@@ -16,6 +16,9 @@ class DeskRepository:
         return row
 
     def add(self, key: str, owner: str, kind: str, data: dict):
+        if kind == "trace":
+            from .monitoring import annotate
+            annotate(data)
         row = Record(id=key, owner=owner, kind=kind, data=data)
         self.session.add(row)
         return row

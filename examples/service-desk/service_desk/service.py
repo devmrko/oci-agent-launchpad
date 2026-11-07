@@ -14,6 +14,7 @@ from sqlalchemy.exc import IntegrityError
 from . import __version__
 from .models import Record
 from .planning import Decision
+from .observability import capture_stage
 from .repository import DeskRepository
 
 DOCS = [
@@ -113,7 +114,7 @@ class DeskService:
             ]
         )
 
-    def chat(self, actor, session_id, message, correlation):
+    def chat(self, actor, session_id, message, correlation, stages=None):
         start = time.perf_counter()
         context = ExecutionContext(correlation, max_calls=1, timeout_seconds=30)
         metadata = {}
@@ -123,27 +124,36 @@ class DeskService:
             self._authorize_chat(actor, body)
             mode = "live-model" if self.planner else "deterministic-demo"
             explicit = self.memory_command(message)
-            selected = (
-                explicit[0]
-                if explicit
-                else (
-                    self.planner(message)
-                    if self.planner
-                    else (
+            if explicit:
+                action = explicit[0]
+            else:
+                with capture_stage(stages, "model.route" if self.planner else "demo.route",
+                                   "generation" if self.planner else "span") as stage:
+                    stage["input"] = {"message": message[:2000]}
+                    selected = self.planner(message) if self.planner else (
                         "propose" if any(w in message.lower() for w in ("요청", "등록", "접수")) else "search"
                     )
-                )
-            )
-            if isinstance(selected, Decision):
-                action, metadata = selected.action, selected.metadata
-            else:
-                action = selected
+                    if isinstance(selected, Decision):
+                        action, metadata = selected.action, selected.metadata
+                    else:
+                        action = selected
+                    stage["output"] = {"selected_action": action if isinstance(action, str) else "invalid"}
+                    stage["model"] = metadata
             allowed = {explicit[0]} if explicit else {"search", "propose"}
             if not isinstance(action, str) or action not in allowed:
                 raise BusinessError(
                     ErrorSpec("INVALID_PLAN", ErrorCategory.VALIDATION, "허용되지 않은 도구입니다.")
                 )
-            result = self.gateway(correlation, mode).invoke(context, actor, action, body.model_dump()).data
+            with capture_stage(stages, "tool." + action, "tool") as stage:
+                # Memory contents are not included in child tool observations.
+                if action in {"search", "propose"}:
+                    stage["input"] = {"message": message[:2000]}
+                result = self.gateway(correlation, mode).invoke(context, actor, action, body.model_dump()).data
+                if explicit:
+                    stage["memory_count"] = result["trace"]["memory"]["count"]
+                if action in {"search", "propose"}:
+                    stage["output"] = {"answer": str(result.get("answer", ""))[:8000], "sources": result.get("sources", [])}
+
             result["trace"].update(
                 model=metadata,
                 tools=[asdict(e) for e in context.events],
@@ -161,7 +171,7 @@ class DeskService:
                 "error",
                 code,
                 start,
-                extra={"model": metadata, "tools": [asdict(e) for e in context.events]},
+                extra={"model": metadata, "session_id": session_id, "tools": [asdict(e) for e in context.events]},
             )
             raise
 
