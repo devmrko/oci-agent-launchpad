@@ -76,7 +76,7 @@ release Terraform의 선택 입력 `post_deploy_check_command`로 VM에 사전 �
 
 `launchpad-check`는 아래 관리자 래퍼로 구현했고 실제 VM에 설치해 ocarun 실행까지 검증했다. 기존 불변 파이프라인에는 옵션을 소급 활성화하지 않았다. 새 릴리스의 명세에서 이 옵션을 사용한다. VM 등록 도구의 입력 검증 모듈도 새 옵션을 아는 동일 버전으로 배포해야 한다. 미지원 구버전은 알 수 없는 설정 키로 거부한다.
 
-2026-11-07 후속 검사 연결의 Terraform mock 테스트 11개, 준비·등록·통합 실행·IAM 관련 Python 테스트 67개가 통과했다. 현재 실제 release workspace의 기본 옵션 계획은 종료 코드 0, `No changes`였다. 후속 검사 활성화 경로는 명세 생성과 입력 전달까지 검증했으며 실제 DevOps 실행 검증은 아직 하지 않았다.
+2026-11-07 후속 검사 연결의 Terraform mock 테스트 11개, 준비·등록·통합 실행·IAM 관련 Python 테스트 67개가 통과했다. 현재 실제 release workspace의 기본 옵션 계획은 종료 코드 0, `No changes`였다. 후속 검사 활성화 경로의 실제 DevOps 실행은 아래 통합 검증 기록을 참조한다.
 
 ## VM 관리자 래퍼 설계
 
@@ -111,3 +111,13 @@ sudo -u ocarun sudo -n /usr/local/sbin/launchpad-check memory-0.5.0-329179a5f71d
 ```
 
 결과에는 활성 릴리스·모델/메모리·Langfuse 입출력·메모리 본문 제외 검사와 관측 5개만 출력됐다. 다른 별칭 `memory-0.4.2`, 관리자 `--sudoers` 옵션, 검증 자격 증명 파일 읽기는 ocarun에서 모두 거부됐다. 기존 설치/활성화 sudoers는 유지했다. 이는 실제 Run Command 사용자로 실행한 검증이며 후속 단계가 포함된 새 DevOps 배포 실행을 검증한 것은 아니다.
+
+## Companion에서 실행한 후속 검사 포함 배포
+
+2026-11-07 13:28 UTC에 `memory-0.5.0-verified` 배포가 SUCCEEDED로 완료됐고, 2026-11-08 Companion 화면과 OCI API에서 결과를 확인했다. 기존 성공 빌드의 동일한 0.5.0 패키지를 재사용했으며 새 앱 버전을 빌드한 것은 아니다. 새 workspace `postcheck-050`을 사용해 기존 불변 파이프라인은 유지했다.
+
+Companion에서 빌드 산출물의 SHA-256·크기 및 대상 VM을 확인한 뒤 실행했다. 실제 OCI INLINE 명세에는 설치·활성화 단계 다음에 `sudo -n /usr/local/sbin/launchpad-check memory-0.5.0-verified`가 있으며, 300초 제한과 실패 전파가 적용됐다. 이 명세를 사용하는 전체 VM rollout이 SUCCEEDED였다. OCI 진행 API는 내부 명령별 stdout을 제공하지 않으므로 이번 기록은 실제 명세와 rollout 결과에 근거한다. 검사의 세부 동작은 앞선 ocarun 직접 실행 결과와 함께 해석한다.
+
+실행 ID: `ocid1.devopsdeployment.oc1.ap-seoul-1.amaaaaaavsea7yia5cjsxz65pbdoaxuilno7vcaat4yd5j6q5s5mjd6bxdpa`. 비공개 증거: `.run/oci-launchpad/deployment-run-050-postcheck.json`, `deployment-spec-050-postcheck.yaml`. 공유 IAM 입력에는 새 파이프라인 ID만 추가하고 기존 ID를 보존했다.
+
+별도 SSH를 통한 현재 ExecStart·health 재조회는 응답 지연으로 확인하지 못했다. 배포 시점의 자동 검사 결과와 현재 시점의 지속 가용성은 구분한다. OKE 배포, 다중 노드 장애 복구, 후속 검사 실패 시 자동 롤백은 이번 검증에 포함되지 않는다. 다음 순서는 VM 현재 상태 및 복구 절차 확인 후 OKE용 컨테이너·배포 명세와 Companion의 범용 OKE 실행 지원을 준비하는 것이다.
