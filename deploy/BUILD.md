@@ -51,7 +51,7 @@ python deploy/prepare_build.py --config .run/build-config.json --output .run/bui
 
 `runner`를 생략하면 OCI 기본 러너를 사용합니다. 선택값으로 `"runner": {"ocpus": 2, "memory_in_gbs": 8}`을 지정할 수 있습니다. 기존 파이프라인의 러너·브랜치가 입력과 다르면 자동 변경하지 않습니다. 실제 서울 검증에서는 기본 러너 확보가 두 번 실패하여 같은 2 OCPU·8GB의 명시적 할당을 시험했습니다. 리전 용량 부족이라고 단정할 증거는 아직 없습니다.
 
-Companion에서 `빌드 → 실행 이력 → 저장하지 않은 빌드의 이력 → OCI DevOps 이력`으로 이동해 파이프라인을 선택합니다. 첫 실행 링크가 보이지 않으면 `명세 조회·수정 → 파라미터 수정·실행`으로 이동합니다. 소스 커밋을 고정하고 `빌드·테스트만`을 선택해 실행합니다. 현재 Registry 전달 단계가 없어 빌드 성공만으로 패키지 영구 저장이나 배포가 완료되지 않습니다.
+Companion에서 `빌드 → 실행 이력 → 저장하지 않은 빌드의 이력 → OCI DevOps 이력`으로 이동해 파이프라인을 선택합니다. 첫 실행 링크가 보이지 않으면 `명세 조회·수정 → 파라미터 수정·실행`으로 이동합니다. 소스 커밋을 고정하고 `빌드·테스트만`을 선택해 실행합니다. Registry 전달 단계 구성과 다운로드는 [빌드 산출물 보관](../infra/terraform/build-delivery/README.md)을 따릅니다. 빌드 성공만으로 앱 배포가 완료되지는 않습니다.
 
 ## 현재 검증 범위
 
@@ -74,3 +74,26 @@ python deploy/verify_release.py --result .run/build-result \
 이 도구는 ZIP·manifest·파일 목록·개별 해시·wheel의 실제 앱/Foundation 버전·고정 의존성을 대조하고, 검증된 파일 경로와 해시를 배포 변수에 넣습니다. `release.json`은 선택적 Terraform 아티팩트로 ZIP 옆에 보관됩니다. 해시와 메타데이터는 서명 또는 소스 신뢰를 대신하지 않습니다. 빌드가 테스트를 실행했다는 진술의 독립적인 증명도 아닙니다.
 
 다음은 [VM 설치 관리자 준비와 Terraform 배포](../infra/terraform/release/README.md)를 따릅니다. 현재 관리자 manifest 등록과 산출물 전달은 별도 단계이며 Companion에서의 자동 완주 경로는 아직 미완성입니다.
+
+
+## 0.5.0 관측 연결 빌드 입력 (2026-11-07)
+
+앱 커밋 `f06ee98c4a5985eaafaa68445151840c95908260`, Foundation 커밋 `d207f52281552a551457733bebc0ee62036b36e3`을 소스 번들로 고정했다. SHA-256은 `63f01c19ade50fc03e11d7faef81e0f65b834112b3e34d3be8ab3a65459a572b`이며 OCI 입력 저장소 커밋 `cb9ae51a126953ef254e5bffeb18dc5d03a47998`에 게시했다. 런타임 Langfuse 키는 포함하지 않는다.
+
+Companion의 Edge 탭에서 빌드 메뉴 이동을 시도했지만 다른 확장 UI 때문에 자동화가 차단됐다. 따라서 이번 빌드 시작은 OCI SDK로 수행했고 Companion 버튼 성공으로 간주하지 않는다. 실행 이름은 `launchpad-050-telemetry`, ID는 `ocid1.devopsbuildrun.oc1.ap-seoul-1.amaaaaaavsea7yiazzgqd6lub73rtwobwvq7sgiakoi3vc4da7pggwobqpta`다. 2026-11-07 04:22 UTC경 확인 상태는 IN_PROGRESS / GET_BUILD_RUNNER이며 소스 빌드·Linux 테스트·release.zip 생성 성공은 아직 확인하지 않았다. 이 기록은 이후 성공이나 실패로 자동 갱신되지 않는다.
+
+[상시 관측 연결의 설정과 남은 작업](SERVICE-DESK-LANGFUSE.md#상시-연결의-현재-차이와-다음-적용-순서)을 함께 확인한다. 빌드 성공만으로 사설 VCN 연결, 비밀 파일 배치, 앱 활성화가 완료되지는 않는다.
+
+
+### 첫 0.5.0 빌드 결과와 수정 재시도
+
+첫 실행은 러너 확보·Python 설치까지 성공했으나 pip 패키지 다운로드에서 프록시 DNS 오류로 FAILED였다. 패키지 버전 부재로 단정하지 않는다. `build_release.py`에 선택값 `LAUNCHPAD_PIP_NETWORK=direct`를 추가했다. 기본값은 기존 설정 상속이며 direct 모드는 pip 명령에만 프록시·PIP 환경변수/설정 파일을 제외하고 공식 PyPI HTTPS 인덱스를 지정한다. TLS 검증은 유지한다. 프록시가 필수인 고객 환경에서는 이 값을 지정하지 않는다. 관련 빌드 테스트 7개 통과. 설정 파일 제외 방식의 근거는 [pip 설정 문서](https://pip.pypa.io/en/stable/topics/configuration/)다.
+
+수정 도구 커밋 `9f01ac3`, OCI 입력 커밋 `e3fecd85329492aad051660c782eb09d4c576b25`로 `launchpad-050-direct-pip`을 시작했다. 앱 소스 번들의 커밋·해시는 그대로다. 실행 ID는 `ocid1.devopsbuildrun.oc1.ap-seoul-1.amaaaaaavsea7yiaovlamzarcfhgj5zsnca5jc2ucchopyzsxda6hxdqbrlq`. 재시도는 접수 확인 단계이며 성공 결과는 별도 확인이 필요하다.
+
+
+### Linux 빌드 성공 및 산출물 전달 권한 보완 (2026-11-07)
+
+직접 PyPI 연결 재시도는 의존성 설치에 성공했으나 모니터링 테스트 2개에서 SQLite 정렬 구문 오류가 발생했다. NULLS LAST 대신 NULL 여부와 시간·ID를 정렬하는 호환 구문으로 수정했다. 앱 커밋 `8fce79b2d0a416f15d3605a31d729e7cb9d641e4`, OCI 입력 커밋 `38b98eb8ba9f60acde9e6012679290904a9d11a6`의 관리형 빌드 `launchpad-050-portable`은 실제 Linux 빌드·테스트·패키지 생성 및 출력 보관 단계까지 SUCCEEDED였다. 소스 번들 SHA-256은 `8e4455d372b9b80f15d2ab7f329b1071baa28c00a38d59355ab00ec7693fe122`이다.
+
+후속 `launchpad-050-deliver`는 빌드에 성공했지만 Artifact Registry 전달에서 DevOps artifact 참조 조회 권한 오류로 실패했다. 기존 프로젝트 조건이 포함된 개별 리소스 읽기 대신, 정확한 빌드 파이프라인 주체에만 구획 내 `read devops-family`를 부여했다. Terraform 적용은 0 생성·1 변경·0 삭제다. 테넌시 전체 manage 권한을 추가하지 않았다. 저장소가 비어 있음을 확인한 후 같은 고정 소스로 `launchpad-050-deliver-readfix`를 시작했다. 이 재시도는 빌드와 전달 단계 모두 SUCCEEDED였고 실제 다운로드 검증까지 통과했다. 실행 ID는 `ocid1.devopsbuildrun.oc1.ap-seoul-1.amaaaaaavsea7yiahwreauygqn3ssxrymxv2rd43qkhuxrtpdwdvx6pf7aca`다. 패키지 SHA-256은 `329179a5f71d4e2541587db438819be162bc42495848ffcfd730f7cd02ec10f4`, manifest SHA-256은 `691d3d05f7d8dcf261e7974b2a5752e9d8200df177d1b85a3a18a5f58bfeeffc`다. 후속 OCI DevOps 배포도 SUCCEEDED였고 실제 0.5.0 health·모델·메모리·Langfuse 연결 검증을 통과했다. [상시 연결 결과](SERVICE-DESK-LANGFUSE.md#050-서비스에-상시-연결-적용-2026-11-07)를 참고한다.
