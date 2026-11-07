@@ -42,7 +42,7 @@ python deploy/prepare_release.py \
 
 [VM 설치 관리자와 Terraform 배포](../infra/terraform/release/README.md)를 따른다. 새 릴리스는 새 workspace를 사용한다. 기존 별칭 재준비 결과(`existing_alias_reused=true`)를 새 릴리스인 것처럼 적용하지 않는다. 이미 배포한 상태는 기존 workspace·파일 경로를 유지하고 차이를 검토한다.
 
-[VM 릴리스 등록 도구](REGISTER-RELEASE.md)가 배포 잠금 안에서 원격 설정을 `previous_vm_config_sha256`과 대조하고 허용 목록을 갱신한다. 달라졌으면 최신 설정으로 새 출력 폴더에 다시 준비한다. 최초 설치는 bootstrap, 이후 별칭 추가는 등록 도구를 사용한다. 환경변수·메모리 비밀 파일·서비스 데이터는 건드리지 않는다. 기존 정책을 재사용하는 경우 새 pipeline ID를 정책 소유 상태에 추가해야 한다. 마지막 배포 실행은 Companion의 성공 빌드 → 배포 연결을 사용한다.
+[VM 릴리스 등록 도구](REGISTER-RELEASE.md)가 배포 잠금 안에서 원격 설정을 `previous_vm_config_sha256`과 대조하고 허용 목록을 갱신한다. 달라졌으면 최신 설정으로 새 출력 폴더에 다시 준비한다. 최초 설치는 bootstrap, 이후 별칭 추가는 등록 도구를 사용한다. 환경변수·메모리 비밀 파일·서비스 데이터는 건드리지 않는다. 기존 정책을 재사용하는 경우 [IAM 연결 입력과 계획 검사](PIPELINE-IAM.md)를 사용해 새 pipeline ID를 정책 소유 상태에 추가한다. 마지막 배포 실행은 Companion의 성공 빌드 → 배포 연결을 사용한다.
 
 ## 검증 결과
 
