@@ -139,3 +139,10 @@ PYTHONPATH=<검증 디렉터리> <앱 venv>/bin/python check_memory_telemetry.py
 이번 빌드·배포 시작은 OCI SDK였다. Companion 브라우저 자동화 차단이 남아 있으므로 Companion 버튼을 통한 전체 완주로 표현하지 않는다. 빌드 결과 다운로드 검증과 root manifest 등록은 운영자 절차이며 아직 Companion의 단일 자동 배포 기능이 아니다. 비동기 관측은 메모리 큐 기반 best-effort이고, 서비스 재시작 시 미전송 이벤트 보존·디스크 큐·재전송 보장은 없다.
 
 VM·ADB·관측 서비스는 검증 후 실행 상태로 유지했다. 원격 HTTPS·고가용성·운영 인증은 이 합성 단일 VM 검증의 완료 범위가 아니다.
+
+
+### Companion에서 성공 빌드를 선택해 재배포 검증
+
+2026-11-07 Companion에 일반 OCI Artifact Registry 기반 빌드·배포 연결을 추가했다. 화면에서 성공 빌드를 선택하고 준비된 0.5.0 배포의 파일 SHA-256·크기 일치를 확인한 뒤 실행했다. 배포 ID `ocid1.devopsdeployment.oc1.ap-seoul-1.amaaaaaavsea7yiauct7yw5wwlbxrayit2gbog7esilsbabcgi7kho3wdisq`의 SUCCEEDED를 OCI API와 Companion 화면에서 확인했고 VM health는 UP · 0.5.0이다. 같은 빌드에 0.4.2 배포를 연결하면 실제 OCI 조회에서 차단됐다. Companion 전체 테스트 122개 통과.
+
+Companion이 파일을 재다운로드하거나 Launchpad manifest를 해석하지 않는다. 원본·대상 불변 저장소의 파일 정보와 배포 대상만 검증한다. 앞 절의 브라우저 차단은 최초 SDK 배포 당시 기록이며 이 후속 검증에서는 로그인·선택·배포 실행이 가능했다. 새 버전의 파이프라인 생성·파일 승격·root manifest 등록 자동화는 여전히 별도 후속 작업이다.

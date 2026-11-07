@@ -9,7 +9,7 @@
 - Artifact Registry 전달 단계의 DevOps 조회 권한 오류를 수정했다. 정확한 빌드 파이프라인 주체에 구획 내 읽기를 허용하며 테넌시 전체 관리 권한은 부여하지 않았다. 후속 Terraform plan은 No changes다.
 - Companion 화면은 다른 확장 UI의 차단으로 이번 실행을 검증하지 못했다. 빌드는 OCI SDK로 시작했으며 Companion을 통한 전체 자동 완주로 표시하지 않는다.
 
-자세한 빌드 결과는 [빌드 안내](../deploy/BUILD.md), 관측 검증과 한계는 [Langfuse 연결](../deploy/SERVICE-DESK-LANGFUSE.md)을 확인한다. 남은 연결 작업은 Companion 화면에서 같은 새 빌드·배포 경로를 완주하는 검증과 manifest 등록·빌드 결과 선택의 자동화다. 이번 클라우드 실행은 SDK 경로이며 이 남은 항목까지 완료한 것은 아니다.
+자세한 빌드 결과는 [빌드 안내](../deploy/BUILD.md), 관측 검증과 한계는 [Langfuse 연결](../deploy/SERVICE-DESK-LANGFUSE.md)을 확인한다. 후속 작업으로 Companion의 성공 빌드 상세 → 배포 선택 → 파일 SHA-256·크기 검증 → 재배포 실행을 구현했고 실제 화면과 OCI API에서 SUCCEEDED, VM UP · 0.5.0을 확인했다. Companion은 Launchpad 전용 파일 형식을 읽지 않는다. 남은 부분은 새 버전의 파이프라인·VM manifest 등록과 산출물 승격 자동화다. 최초 빌드는 SDK로 시작했으며 새 버전 생성부터 무개입 전체 자동화가 된 것은 아니다.
 
 2026-11-06. 전체 목표는 AI-DLC 템플릿으로 고객 요구를 구체화하고, 독립 AgentCore 대응 플랫폼 위에서 에이전트를 실행하며, OCI Companion으로 구축·빌드·배포·모니터링을 돕는 것입니다. 플랫폼을 만드는 과정에서 Companion에 없는 기능도 구현합니다.
 
