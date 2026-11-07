@@ -53,4 +53,10 @@ workspace 선택은 프로세스별 `TF_WORKSPACE`로 지정한다. `TF_CLI_ARGS
 
 실제 OCI 조회를 사용한 새 `provision-plan-050` workspace의 계획은 `RELEASE_PLAN_VERIFIED`로 통과했다. 기존 `bootstrap-050`의 IAM-only 경로는 `IAM_PLAN_VERIFIED`로 통과했다. 이후 기본 workspace 선택은 `bootstrap-050`으로 복원했다. 로컬 빈 workspace와 계획 파일은 남았지만 실제 새 자원·권한은 생성하지 않았다.
 
-`--execute`의 전체 순서는 테스트 대역으로 검증했다. 이 통합 명령으로 신규 자원을 실제 생성하고 Companion에서 새 버전을 배포하는 검증은 아직 하지 않았다. 기존 별도 명령들의 실제 적용 성공과 이번 통합 실행의 실배포 검증을 혼동하지 않는다.
+`--execute`의 전체 순서 테스트에 이어 같은 날 실제 서울 환경에서 적용했다. 검증된 0.5.0 패키지를 새 별칭 `memory-0.5.0-329179a5f71d`로 등록했고, VM 등록은 `REGISTERED` 및 앱 재시작 없음으로 종료됐다. release workspace `provision-plan-050`에서 8개 자원을 생성하고, 정책 소유 workspace `bootstrap-vm`의 기존 정책 1개만 수정했다. 삭제된 자원은 없으며 최종 상태는 `INFRASTRUCTURE_APPLIED`였다.
+
+기존 0.4.2·0.5.0 파이프라인 권한을 보존한 새 owner-vars를 현재 정책 입력에도 반영했고 이전 사본을 보관했다. 적용 후 두 workspace의 실제 Terraform plan은 모두 상세 종료 코드 0(무변경)이었다. Companion의 실제 `OciBuildHandoff` 코드로 성공 빌드와 새 파이프라인의 패키지 1개 일치를 확인했고, 다른 0.4.2 파이프라인은 거부됐다.
+
+이 검증은 새 앱 버전 출시가 아니라 동일한 0.5.0 패키지의 새 배포 경로 검증이다. Companion UI에서 배포 실행은 Edge 확장 프로그램의 자동화 차단으로 아직 진행하지 못했다. 따라서 새 경로의 앱 설치·활성화·배포 후 메모리 및 Langfuse 검증은 미완료다. 기존 앱은 등록 직후 `UP · 0.5.0`이었다.
+
+실행 근거는 비공개 `.run/oci-launchpad/provision-execute-050`의 progress.json, Terraform 로그, after-release.log, after-iam.log와 Companion 로컬 검증 결과다. 준비·계획 파일과 상태에는 운영 정보가 있어 공개 문서에 복사하지 않는다.
