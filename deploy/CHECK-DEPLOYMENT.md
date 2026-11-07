@@ -121,3 +121,9 @@ Companion에서 빌드 산출물의 SHA-256·크기 및 대상 VM을 확인한 �
 실행 ID: `ocid1.devopsdeployment.oc1.ap-seoul-1.amaaaaaavsea7yia5cjsxz65pbdoaxuilno7vcaat4yd5j6q5s5mjd6bxdpa`. 비공개 증거: `.run/oci-launchpad/deployment-run-050-postcheck.json`, `deployment-spec-050-postcheck.yaml`. 공유 IAM 입력에는 새 파이프라인 ID만 추가하고 기존 ID를 보존했다.
 
 별도 SSH를 통한 현재 ExecStart·health 재조회는 응답 지연으로 확인하지 못했다. 배포 시점의 자동 검사 결과와 현재 시점의 지속 가용성은 구분한다. OKE 배포, 다중 노드 장애 복구, 후속 검사 실패 시 자동 롤백은 이번 검증에 포함되지 않는다. 다음 순서는 VM 현재 상태 및 복구 절차 확인 후 OKE용 컨테이너·배포 명세와 Companion의 범용 OKE 실행 지원을 준비하는 것이다.
+
+### 2026-11-08 재기동 후 확인
+
+후속 확인에서 앱 VM, Langfuse VM, Agent Memory ADB가 모두 STOPPED인 것을 OCI API로 확인했다. 중지 주체나 자동 중지 일정은 확인하지 않았다. 기존 세 리소스를 기동한 뒤 앱의 실제 ExecStart가 `/opt/launchpad/releases/memory-0.5.0-verified/venv/bin/python`이고 ActiveState=active, health=UP, version=0.5.0임을 확인했다. SSH 시간 초과의 당시 원인은 중지된 VM이었다.
+
+동일한 ocarun 제한 명령으로 통합 검사를 다시 실행해 PASS를 확인했다. 활성 릴리스, 실제 모델 및 세션 간 기억, Langfuse 입출력, 메모리 본문 제외가 통과했고 관측 수는 5였다. 이는 기존 데이터가 있는 환경의 재기동 후 기능 확인이며 새 인프라의 재현 배포나 DB 백업 복구 검증은 아니다. 기존 성공 파이프라인을 재실행하는 복구 경로는 유지하고, OKE 준비 사항은 [OKE 설계](OKE-DESIGN.md)에 정리했다.

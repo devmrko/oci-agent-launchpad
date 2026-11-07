@@ -8,18 +8,16 @@ from pathlib import Path
 
 def resources():
     import numpy as np
-    import oci
     import oracledb
     from oracleagentmemory.apis.embedders import IEmbedder
     from python_foundation.agent_memory import OracleMemory, oracle_memory_client
 
     cfg = json.loads(Path(os.environ["DESK_MEMORY_CONFIG"]).read_text())
-    client = oci.generative_ai_inference.GenerativeAiInferenceClient(
-        {},
-        signer=oci.auth.signers.InstancePrincipalsSecurityTokenSigner(),
-        service_endpoint=f"https://inference.generativeai.{cfg.get('embedding_region', 'us-ashburn-1')}.oci.oraclecloud.com",
-        timeout=(5, 25),
-        retry_strategy=oci.retry.NoneRetryStrategy(),
+    from .oci_client import inference_client
+
+    client = inference_client(
+        region=cfg.get("embedding_region", "us-ashburn-1"),
+        auth=os.environ.get("DESK_OCI_AUTH", "instance"),
     )
 
     class Embeddings(IEmbedder):

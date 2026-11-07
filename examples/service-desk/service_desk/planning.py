@@ -31,23 +31,9 @@ class OciPlanner:
         if client is not None:
             self.client = client
             return
-        import oci
+        from .oci_client import inference_client
 
-        options = {
-            "service_endpoint": f"https://inference.generativeai.{region}.oci.oraclecloud.com",
-            "timeout": (5, 25),
-            "retry_strategy": oci.retry.NoneRetryStrategy(),
-        }
-        if auth == "instance":
-            self.client = oci.generative_ai_inference.GenerativeAiInferenceClient(
-                {}, signer=oci.auth.signers.InstancePrincipalsSecurityTokenSigner(), **options
-            )
-        elif auth == "config":
-            config = oci.config.from_file()
-            config["region"] = region
-            self.client = oci.generative_ai_inference.GenerativeAiInferenceClient(config, **options)
-        else:
-            raise ValueError("DESK_OCI_AUTH must be instance or config")
+        self.client = inference_client(region=region, auth=auth)
 
     def __call__(self, message):
         import oci
