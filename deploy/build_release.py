@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import os
 import platform
 import re
 import shutil
@@ -18,7 +19,15 @@ from package_sources import package_sources
 
 
 def run(*args, **kwargs):
-    subprocess.run([str(a) for a in args], check=True, **kwargs)
+    command = [str(a) for a in args]
+    # OCI managed image may carry a proxy unavailable to this public runner.
+    # Keep inherited settings by default; direct mode is explicit and pip-only.
+    if command[1:3] == ['-m', 'pip'] and os.environ.get('LAUNCHPAD_PIP_NETWORK') == 'direct':
+        env = {k: v for k, v in os.environ.items()
+               if not k.startswith('PIP_') and k.lower() not in {'http_proxy', 'https_proxy', 'all_proxy', 'no_proxy'}}
+        env.update(PIP_CONFIG_FILE=os.devnull, PIP_INDEX_URL='https://pypi.org/simple')
+        kwargs['env'] = env
+    subprocess.run(command, check=True, **kwargs)
 
 
 def pinned_requirements(path):

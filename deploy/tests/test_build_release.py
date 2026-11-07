@@ -31,3 +31,21 @@ def test_source_checksum_failure_never_publishes(tmp_path, monkeypatch):
     with pytest.raises(ValueError, match='checksum mismatch'):
         build_release.build(None, None, tmp_path, None, tmp_path / 'out', 'test', source, '0' * 64)
     assert not (tmp_path / 'out').exists()
+
+
+def test_direct_network_applies_only_to_pip(monkeypatch):
+    calls = []
+    monkeypatch.setattr(build_release.subprocess, 'run', lambda args, **kwargs: calls.append((args, kwargs)))
+    monkeypatch.setenv('LAUNCHPAD_PIP_NETWORK', 'direct')
+    monkeypatch.setenv('HTTPS_PROXY', 'http://unreachable.invalid')
+    monkeypatch.setenv('PIP_TRUSTED_HOST', 'unsafe.invalid')
+    build_release.run('/venv/python', '-m', 'pip', 'install', 'pip==25.3')
+    env = calls[-1][1]['env']
+    assert 'HTTPS_PROXY' not in env and 'PIP_TRUSTED_HOST' not in env
+    assert env['PIP_CONFIG_FILE'] == build_release.os.devnull
+    assert env['PIP_INDEX_URL'] == 'https://pypi.org/simple'
+    build_release.run('/venv/python', '-m', 'pytest')
+    assert 'env' not in calls[-1][1]
+    monkeypatch.delenv('LAUNCHPAD_PIP_NETWORK')
+    build_release.run('/venv/python', '-m', 'pip', 'install', 'pip==25.3')
+    assert 'env' not in calls[-1][1]

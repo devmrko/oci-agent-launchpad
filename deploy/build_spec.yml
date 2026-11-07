@@ -17,6 +17,7 @@ steps:
     command: |
       set -euo pipefail
       cd "${OCI_PRIMARY_SOURCE_DIR}"
+      export LAUNCHPAD_PIP_NETWORK=direct
       python3.12 deploy/build_release.py \
         --source-archive sources.tgz \
         --source-sha256 "$(cat source.sha256)" \
