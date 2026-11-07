@@ -88,7 +88,7 @@ def install(app, service):
             conditions.append(stamp <= date(until))
         with SqlAlchemyUnitOfWork(service.factory) as u:
             total = u.session.scalar(select(func.count()).select_from(Record).where(*conditions))
-            rows = u.session.scalars(select(Record).where(*conditions).order_by(stamp.desc().nullslast(), Record.id.desc())
+            rows = u.session.scalars(select(Record).where(*conditions).order_by(stamp.is_(None), stamp.desc(), Record.id.desc())
                                      .offset((page-1)*page_size).limit(page_size))
             return {'schema_version': 1, 'items': [public(row) for row in rows], 'page': page,
                     'page_size': page_size, 'total': total, 'pages': (total+page_size-1)//page_size, 'snapshot': bound}

@@ -39,3 +39,27 @@ def test_failure_detail_has_code_without_raw_prompt(tmp_path):
         item=response.json()['items'][0]
         assert item['session_id']==sid and item['error_code']=='RuntimeError'
         assert 'private' not in response.text and 'secret prompt' not in response.text
+
+
+
+def test_legacy_null_timestamp_sorts_last_without_nulls_last_syntax(tmp_path):
+    from sqlalchemy import event
+    from service_desk.models import Record
+    app = app_for(tmp_path / 'legacy.db')
+    service = app.state.desk
+    statements = []
+    with service.factory() as session:
+        event.listen(session.get_bind(), 'before_cursor_execute',
+                     lambda conn, cursor, statement, parameters, context, many: statements.append(statement))
+    with TestClient(app) as client:
+        proposal(client)
+        with service.factory() as session:
+            original = session.query(Record).filter_by(kind='trace').one()
+            session.add(Record(id='legacy-trace', owner=original.owner, kind='trace',
+                               data={'status': 'ok', 'request_id': 'legacy-request'}))
+            session.commit()
+        response = client.get('/api/monitoring/v1/agents/service-desk/executions', headers=headers())
+        assert response.status_code == 200
+        assert response.json()['items'][-1]['id'] == 'legacy-trace'
+        assert response.json()['total'] == 2
+    assert all('NULLS LAST' not in statement.upper() for statement in statements)
