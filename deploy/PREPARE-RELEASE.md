@@ -48,4 +48,4 @@ python deploy/prepare_release.py \
 
 2026-11-07 준비·패키지·다운로드 관련 테스트 22개 통과. 실제 관리형 빌드의 0.5.0 패키지로 생성한 VM 설정은 현재 VM 설정과 일치했고, Terraform 배포값도 패키지 사본 경로를 제외하고 현재 입력과 일치했다. 기존 0.4.1·0.4.2·0.5.0 별칭을 보존했다. 이 검증에서는 클라우드·VM 설정을 변경하지 않았다.
 
-[통합 파이프라인 실행](PROVISION-PIPELINE.md)에서 Terraform 적용과 IAM 연결을 수행할 수 있다. 새 파이프라인 생성부터 Companion 앱 배포까지의 전체 통합 실검증은 아직 남아 있다. Companion과의 공통 계약에는 이 앱의 manifest 형식을 추가하지 않는다.
+[통합 파이프라인 실행](PROVISION-PIPELINE.md)에서 Terraform 적용과 IAM 연결을 수행할 수 있다. 검증된 0.5.0 패키지로 새 파이프라인 생성부터 Companion 앱 배포, 모델·메모리·Langfuse 확인까지 통합 실검증을 완료했다. Companion과의 공통 계약에는 이 앱의 manifest 형식을 추가하지 않는다.

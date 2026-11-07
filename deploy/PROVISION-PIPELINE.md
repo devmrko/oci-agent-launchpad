@@ -51,12 +51,16 @@ workspace 선택은 프로세스별 `TF_WORKSPACE`로 지정한다. `TF_CLI_ARGS
 
 2026-11-07 통합 도구·IAM·등록·준비 관련 테스트 62개가 통과했다. 위험 계획 차단, 기본 모드의 적용 금지, 실행 단계 순서, IAM 실패 전파와 재개, 패키지 변조, 환경변수 격리, 로그 출력 범위를 검사했다.
 
-실제 OCI 조회를 사용한 새 `provision-plan-050` workspace의 계획은 `RELEASE_PLAN_VERIFIED`로 통과했다. 기존 `bootstrap-050`의 IAM-only 경로는 `IAM_PLAN_VERIFIED`로 통과했다. 이후 기본 workspace 선택은 `bootstrap-050`으로 복원했다. 로컬 빈 workspace와 계획 파일은 남았지만 실제 새 자원·권한은 생성하지 않았다.
+실제 OCI 조회를 사용한 새 `provision-plan-050` workspace의 계획은 `RELEASE_PLAN_VERIFIED`로 통과했다. 기존 `bootstrap-050`의 IAM-only 경로는 `IAM_PLAN_VERIFIED`로 통과했다. 이후 기본 workspace 선택은 `bootstrap-050`으로 복원했다. 이 계획 검증 단계에서는 실제 자원·권한을 생성하지 않았다. 이후 실행 결과는 아래와 같다.
 
 `--execute`의 전체 순서 테스트에 이어 같은 날 실제 서울 환경에서 적용했다. 검증된 0.5.0 패키지를 새 별칭 `memory-0.5.0-329179a5f71d`로 등록했고, VM 등록은 `REGISTERED` 및 앱 재시작 없음으로 종료됐다. release workspace `provision-plan-050`에서 8개 자원을 생성하고, 정책 소유 workspace `bootstrap-vm`의 기존 정책 1개만 수정했다. 삭제된 자원은 없으며 최종 상태는 `INFRASTRUCTURE_APPLIED`였다.
 
 기존 0.4.2·0.5.0 파이프라인 권한을 보존한 새 owner-vars를 현재 정책 입력에도 반영했고 이전 사본을 보관했다. 적용 후 두 workspace의 실제 Terraform plan은 모두 상세 종료 코드 0(무변경)이었다. Companion의 실제 `OciBuildHandoff` 코드로 성공 빌드와 새 파이프라인의 패키지 1개 일치를 확인했고, 다른 0.4.2 파이프라인은 거부됐다.
 
-이 검증은 새 앱 버전 출시가 아니라 동일한 0.5.0 패키지의 새 배포 경로 검증이다. Companion UI에서 배포 실행은 Edge 확장 프로그램의 자동화 차단으로 아직 진행하지 못했다. 따라서 새 경로의 앱 설치·활성화·배포 후 메모리 및 Langfuse 검증은 미완료다. 기존 앱은 등록 직후 `UP · 0.5.0`이었다.
+이 검증은 동일한 0.5.0 패키지의 새 배포 경로 검증이며 앱 기능 버전을 올린 것은 아니다. Companion 화면에서 `launchpad-050-deliver-readfix` 성공 빌드의 **이 빌드로 배포 준비**를 선택하고, 새 파이프라인의 파일 1개 SHA256·크기 및 대상 VM 일치 확인 후 **확인한 배포 실행**을 눌렀다. 실행 이름은 `companion-1845de09-8c6b-4700-9ce2-45ae7a357b43`이다. 화면에서 ACCEPTED를 확인했고, 이후 새로고침이 Edge 확장 프로그램에 차단되어 같은 실행의 최종 `SUCCEEDED`는 OCI API로 확인했다. 최종 성공 화면 스크린샷은 확보하지 못했다.
 
-실행 근거는 비공개 `.run/oci-launchpad/provision-execute-050`의 progress.json, Terraform 로그, after-release.log, after-iam.log와 Companion 로컬 검증 결과다. 준비·계획 파일과 상태에는 운영 정보가 있어 공개 문서에 복사하지 않는다.
+VM의 systemd ExecStart가 `/opt/launchpad/releases/memory-0.5.0-329179a5f71d/venv/bin/python`으로 바뀌었고 새 프로세스가 `UP · 0.5.0`으로 응답했다. 기존 릴리스 디렉터리와 복구 별칭은 보존했다.
+
+새 프로세스에서 합성 데이터로 인증된 capabilities, 실제 OCI 모델 호출·버전별 trace, Oracle Agent Memory의 세션 간 기억 저장·조회가 모두 PASS였다. 비공개 VCN/LB 경로의 Langfuse API에서 해당 요청의 관측 기록 5개를 확인했다. 채팅 입력·출력은 기록됐고 메모리 검색 본문은 input/output에서 제외됐다. 이 검증은 해당 합성 요청의 결과이며 모든 업무 시나리오·장애 복구·운영 규모를 보장하지 않는다.
+
+실행 근거는 비공개 `.run/oci-launchpad/provision-execute-050`의 progress.json, Terraform 로그, after-release.log, after-iam.log, `.run/oci-launchpad/deployment-run-050-integrated.json`, `validation-050-integrated.json` 및 Companion 로컬 검증 결과다. 준비·계획 파일과 상태에는 운영 정보가 있어 공개 문서에 복사하지 않는다.

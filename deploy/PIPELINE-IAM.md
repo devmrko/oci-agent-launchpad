@@ -54,4 +54,4 @@ TF_WORKSPACE='<정책 소유 workspace>' terraform -chdir=infra/terraform/releas
 
 OCI provider 스키마에서 `ETag`, `lastUpdateETag`는 deprecated·computed 필드로 확인됐다. 실제 refresh에서 빈 값이 채워진 사례가 있어 정책 비교에서는 이 두 메타데이터 필드만 제외한다. 정책 문장·ID·구획·설명 등 다른 필드 변경은 거부한다. 일반 리소스 drift는 별도 검토 대상으로 남긴다.
 
-[통합 파이프라인 실행 도구](PROVISION-PIPELINE.md)가 릴리스 생성 계획·적용과 IAM 연결 계획·적용을 순서대로 수행한다. 통합 명령의 실제 신규 권한 적용과 적용 후 무변경 계획까지 검증했다. Companion 화면의 앱 배포 실행과 그 이후 확인은 아직 남아 있으며 상세 범위는 통합 실행 문서에 기록한다. VM 등록·IAM·Terraform·Companion 사이에 분산 트랜잭션은 없다. 각 단계의 성공을 확인하고 실패한 단계부터 진행한다.
+[통합 파이프라인 실행 도구](PROVISION-PIPELINE.md)가 릴리스 생성 계획·적용과 IAM 연결 계획·적용을 순서대로 수행한다. 통합 명령의 실제 신규 권한 적용과 적용 후 무변경 계획까지 검증했다. Companion 화면의 앱 배포 실행과 이후 모델·메모리·Langfuse 확인까지 통과했다. 상세 검증 범위는 통합 실행 문서에 기록한다. VM 등록·IAM·Terraform·Companion 사이에 분산 트랜잭션은 없다. 각 단계의 성공을 확인하고 실패한 단계부터 진행한다.
