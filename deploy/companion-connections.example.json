@@ -1,0 +1,53 @@
+{
+  "scope": {
+    "profile": "DEFAULT",
+    "tenancy": "<tenancy OCID>",
+    "user": "<user OCID>",
+    "region": "ap-seoul-1",
+    "compartment": "<compartment OCID>"
+  },
+  "apps": [
+    {
+      "key": "service-desk-vm",
+      "name": "Service Desk VM",
+      "environment": "dev-vm",
+      "baseUrl": "http://127.0.0.1:18091",
+      "tokenFile": "/protected/service-desk-vm.token",
+      "dependencies": [
+        {
+          "type": "VM",
+          "label": "VM runtime",
+          "ocid": "<instance OCID>"
+        }
+      ]
+    },
+    {
+      "key": "service-desk-oke",
+      "name": "Service Desk OKE",
+      "environment": "dev-oke",
+      "baseUrl": "http://127.0.0.1:18092",
+      "tokenFile": "/protected/service-desk-oke.token",
+      "dependencies": [
+        {
+          "type": "OKE",
+          "label": "OKE runtime",
+          "ocid": "<cluster OCID>"
+        },
+        {
+          "type": "ADB",
+          "label": "Agent memory",
+          "ocid": "<autonomousdatabase OCID>"
+        }
+      ],
+      "oke": {
+        "clusterId": "<cluster OCID>",
+        "kubeconfig": "/protected/oke-config",
+        "namespace": "service-desk",
+        "deployment": "service-desk",
+        "server": "",
+        "tlsServerName": "",
+        "inspectNodes": false
+      }
+    }
+  ]
+}

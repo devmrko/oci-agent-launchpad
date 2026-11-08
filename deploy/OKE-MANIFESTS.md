@@ -1,6 +1,6 @@
 # 같은 에이전트를 OKE에 올릴 배포 명세 준비하기
 
-OCI 엔지니어가 VM에서 검증한 service-desk를 OKE로 옮길 때 사용할 명세 생성기다. 환경별 namespace·이미지·모델·비밀 참조를 입력하면 적용 순서대로 JSON 명세 5개를 만든다. **현재 로컬 생성·검증 단계이며 실제 OKE 배포 성공을 의미하지 않는다.**
+OCI 엔지니어가 VM에서 검증한 service-desk를 OKE로 옮길 때 사용할 명세 생성기다. 환경별 namespace·이미지·모델·비밀 참조를 입력하면 적용 순서대로 JSON 명세 5개를 만든다. **2026-11-08 단일 OKE 배포와 앱 통합 검증을 완료했다.** [실측 범위와 한계](../infra/terraform/oke-delivery/README.md)를 참고한다.
 
 ## 구성과 준비 조건
 
@@ -44,7 +44,7 @@ python3 deploy/render_oke.py --config /path/to/oke-input.json --output /path/to/
 
 ## 비밀 주입 계약
 
-같은 namespace의 `runtime_secret`에 다음 키가 필요하다. 비밀은 Vault에서 제한된 권한으로 전달하는 별도 경로를 구성해야 한다. **Vault → Kubernetes Secret 동기화는 아직 이 생성기에 구현되지 않았다.** 평문 Secret 파일을 Git에 추가하거나 DevOps 로그에 출력하지 않는다.
+같은 namespace의 `runtime_secret`에 다음 키가 필요하다. 비밀은 Vault에서 제한된 권한으로 전달하는 별도 경로를 구성해야 한다. 별도 `sync_oke_secret.py`로 지정 Vault 버전을 전달한다. 이 명세 생성기는 비밀을 처리하지 않으며 자동 회전 컨트롤러도 아니다. 평문 Secret 파일을 Git에 추가하거나 DevOps 로그에 출력하지 않는다.
 
 | Secret 키 | 앱 전달 방식 |
 |---|---|
@@ -62,7 +62,7 @@ Kubernetes의 Secret 파일은 심볼릭 링크다. 현재 Langfuse 파일 로�
 
 startup/readiness는 `/health`에서 로컬 SQLite 연결을 확인한다. liveness는 TCP 포트만 확인하므로 모델·ADB 장애를 직접 재시작 조건으로 삼지 않는다. TCP 검사는 업무 정상 동작을 증명하지 않는다. 시작 시 ADB 연결 실패는 앱 기동을 막을 수 있다.
 
-실제 완료에는 이미지 기동, workload identity 권한, ADB ACL과 Langfuse 경로, 모델 응답, 세션 간 기억, Langfuse 관측·입출력 정책, Pod 재생성 후 PVC 데이터 보존 검사가 모두 필요하다. Companion의 OKE 대상 검증·실행 지원과 실제 배포는 후속 작업이다.
+실제 완료에는 이미지 기동, workload identity 권한, ADB ACL과 Langfuse 경로, 모델 응답, 세션 간 기억, Langfuse 관측·입출력 정책, Pod 재생성 후 PVC 데이터 보존 검사가 모두 필요하다. Companion의 OKE 대상 검증·배포 실행과 실제 단일 Pod 통합 검증은 완료 기록이 있다. 다중 노드·운영 복구·새 고객 환경 재현은 후속이다.
 
 근거: [OKE workload identity](https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contenggrantingworkloadaccesstoresources.htm), [DevOps의 OKE manifest 순차 적용](https://docs.oracle.com/en-us/iaas/Content/devops/using/deploy_oke.htm).
 

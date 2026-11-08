@@ -1,5 +1,11 @@
 # 현재 상태 — 독립 플랫폼 파일럿과 Companion 연동
 
+## 2026-11-09 전체 점검
+
+최신 완료 범위와 다음 작업은 [기능·재현 배포 점검](design/platform-readiness-review.md)을 기준으로 본다. OKE 0.6.0 모델·메모리·Langfuse·PVC 보존이 검증됐고 Companion에는 독립 앱 등록, OCI 의존 리소스, Deployment/Pod/노드 조회가 반영됐다. 아래 11월 7일 이전 문단은 해당 시점의 기록이다. 과거 약 30% 수치를 현재 완료율로 사용하지 않는다. 전체 AgentCore 동등성과 새 고객 환경의 무개입 배포는 미완료다.
+
+재현 설정의 첫 보완으로 [다중 앱 연결 생성기](../deploy/COMPANION-CONNECTIONS.md)를 추가했다. 기존 단일 agent-monitor 생성기는 호환용으로 남기며 현재 Companion 신규 연결에는 새 형식을 사용한다.
+
 ## 2026-11-07 관리형 빌드와 상시 관측 연결
 
 현재 VM 서비스는 **0.5.0 · UP**이다. OCI 관리형 Linux 빌드·테스트 → Artifact Registry 전달 → 다운로드 무결성 검사 → OCI DevOps VM 배포가 모두 성공했다. 아래 11월 6일의 러너 확보 실패는 과거 기록이며 현재 빌드 차단 사유가 아니다.
