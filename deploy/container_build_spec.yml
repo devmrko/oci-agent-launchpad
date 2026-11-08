@@ -1,0 +1,52 @@
+version: 0.1
+component: build
+timeoutInSeconds: 1800
+shell: bash
+failImmediatelyOnError: true
+steps:
+  - type: Command
+    name: Check image packaging capacity
+    command: |
+      set -euo pipefail
+      cd "${OCI_PRIMARY_SOURCE_DIR}"
+      python3 deploy/probe_build_runner.py > runner-capacity.json
+      python3 - <<'PY'
+      import json
+      d=json.load(open('runner-capacity.json'))
+      assert d['engine']=='podman' and d['storage_driver']=='overlay'
+      assert min(p['available_bytes'] for p in d['paths'].values()) >= 16*1024**3, 'Need 16 GiB free for base, layers, export and reserve'
+      assert int(d['cgroup_v2']['memory.max']) >= 4*1024**3, 'Need 4 GiB memory'
+      PY
+  - type: Command
+    name: Package verified wheels and inspect runtime
+    command: |
+      set -euo pipefail
+      cd "${OCI_PRIMARY_SOURCE_DIR}"
+      python3 - <<'PY'
+      import json,re,subprocess
+      b=json.load(open('container/container-input.json'))
+      assert b['platform']=='linux/amd64'
+      assert re.fullmatch(r'[a-z0-9][a-z0-9./:_-]*@sha256:[a-f0-9]{64}',b['base_image'])
+      subprocess.run(['podman','--remote=false','build','--platform','linux/amd64','--build-arg','BASE_IMAGE='+b['base_image'],'-t','localhost/launchpad-service-desk:verified','container'],check=True)
+      PY
+      podman run --rm --entrypoint python localhost/launchpad-service-desk:verified -c 'import service_desk.app, python_foundation, oracleagentmemory; print("Runtime imports passed")'
+      cid=$(podman run -d --read-only --cap-drop=ALL --security-opt=no-new-privileges --tmpfs /data:uid=10001,gid=10001,mode=0700 --tmpfs /tmp:uid=10001,gid=10001,mode=0700 localhost/launchpad-service-desk:verified)
+      trap 'podman logs "$cid"; podman rm -f "$cid"' EXIT
+      podman exec -i "$cid" python - <<'PY'
+      import json,time,urllib.request
+      expected=json.load(open('/opt/launchpad/release.json'))['app_version']
+      for attempt in range(30):
+          try:
+              response=json.load(urllib.request.urlopen('http://127.0.0.1:8092/health',timeout=2))
+              assert response['status']=='UP' and response['version']==expected,response
+              print(json.dumps({'runtime_health':'PASS','version':expected,'external_integrations':'NOT_CHECKED'}))
+              break
+          except OSError:
+              time.sleep(1)
+      else:
+          raise RuntimeError('Container did not become healthy')
+      PY
+outputArtifacts:
+  - name: service-desk-image
+    type: DOCKER_IMAGE
+    location: localhost/launchpad-service-desk:verified

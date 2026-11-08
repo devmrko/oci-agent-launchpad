@@ -65,3 +65,13 @@ startup/readiness는 `/health`에서 로컬 SQLite 연결을 확인한다. liven
 실제 완료에는 이미지 기동, workload identity 권한, ADB ACL과 Langfuse 경로, 모델 응답, 세션 간 기억, Langfuse 관측·입출력 정책, Pod 재생성 후 PVC 데이터 보존 검사가 모두 필요하다. Companion의 OKE 대상 검증·실행 지원과 실제 배포는 후속 작업이다.
 
 근거: [OKE workload identity](https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contenggrantingworkloadaccesstoresources.htm), [DevOps의 OKE manifest 순차 적용](https://docs.oracle.com/en-us/iaas/Content/devops/using/deploy_oke.htm).
+
+## 컨테이너 이미지 빌드 경로
+
+앱 소스 빌드는 OCI Functions가 맡고, 컨테이너 포장은 OCI DevOps Managed Build가 맡는다. `prepare_container.py`로 검증된 릴리스 ZIP을 풀어 `container/`를 준비한 뒤 [이미지 빌드 명세](container_build_spec.yml)를 `build_spec.yml`로 사용한다. 빌드 저장소에는 `container/`와 `deploy/probe_build_runner.py`만 필요하다. 런타임 계정·DB·Langfuse 비밀은 포함하지 않는다.
+
+빌드 실행기는 Podman overlay, 여유 디스크 최소 16GiB, 메모리 제한 최소 4GiB를 확인한다. 디스크 예산은 기반 이미지/레이어 4GiB + 설치/중간 결과 4GiB + 전달용 이미지 4GiB + 여유 4GiB다. 명세는 오프라인 wheel 설치와 `pip check`, 주요 import, 기본 실행 명령으로 시작한 비root·읽기 전용 컨테이너의 `/health`와 버전을 검사한다. `/data`와 `/tmp`는 이 검사에서만 임시 파일시스템을 사용한다. 실제 OKE에서는 `/data`를 PVC로 바꾼다.
+
+이 검사는 합성 모드의 기동 검사다. OCI 모델·ADB·Langfuse와의 실제 연결 및 PVC 보존은 증명하지 않는다. `service-desk-image` 출력은 별도 전달 단계에서 전용 비공개 OCIR 저장소로 게시하고, 최종 성공 후 registry digest를 조회해 배포 명세에 넣는다. 빌드 단계 성공만으로 게시 완료로 판단하지 않는다.
+
+2026-11-08 Companion에서 `launchpad-service-desk-image` 파이프라인을 실행했다. 소스는 전용 `oke-service-desk-060` 브랜치, 포장 대상은 Functions 빌드 `b874b66b-9c95-43b5-a0c1-8c07a32d8afe`의 0.6.0이다. 실행 중인 Companion에는 OKE 검증 기능을 반영했고 브라우저에서 기존 VM 대상 확인도 재검증했다. 이 문서 작성 시 이미지 빌드는 실행기 할당 중이며 OKE 미배포다.
