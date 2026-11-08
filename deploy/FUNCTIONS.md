@@ -65,3 +65,18 @@ Companion 커밋 72f3349는 `/usr/bin/env fdk`로 시작 경로를 수정했다.
 배포 자동화 레슨런: update_function은 응답 본문이 없을 수 있다. 반환 data에서 Function ID를 읽으려다 실패했지만 이미지 갱신 자체는 성공했다. 재갱신 전에 get_function으로 적용 digest를 확인하고, 스크립트도 갱신 후 리소스를 다시 읽도록 수정했다. 쓰기 후 로컬 오류를 곧바로 원격 작업 실패로 취급하지 않는다.
 
 이 시점의 남은 검증은 Companion의 Python 소스 빌드 실행, 결과 저장 IAM, 실제 테스트 보고서, foundation·앱 wheel 크기와 SHA-256 대조다. 브라우저 확장 프로그램 화면이 Companion 조작을 차단하여 아직 실행하지 않았다. Function probe 성공을 소스 빌드·VM 배포·OKE 배포 완료로 표시하지 않는다.
+
+## Companion에서 Python 소스 빌드 성공
+
+2026-11-08 Companion의 Python 빌드 화면에서 고정된 소스 객체 버전·SHA-256·커밋, verify, project, dist/*.whl, 여유 공간 예산 256MiB를 입력해 실행했다. 첫 요청은 FDK가 source_bundle 모듈을 찾지 못해 결과 기록 전에 실패했다. 파일이 이미지에 있어도 FDK의 모듈 검색 경로에 자동 포함되는 것은 아니었다. 기존 설정을 보존하면서 Function 설정에 PYTHONPATH=/function을 추가했고, Companion의 Python Dockerfile에도 같은 ENV를 추가했다. 현재 배포 이미지는 위 060-2 digest 그대로이며 실제 수정은 Function 설정으로 적용했다. 새 Dockerfile 자체를 재빌드한 것으로 표현하지 않는다.
+
+재실행 b874b66b-9c95-43b5-a0c1-8c07a32d8afe는 SUCCEEDED다. 실제 Function 안에서 내부 foundation과 앱을 설치하고 pip check, pytest, 두 패키지 wheel 생성을 마쳤다. 테스트는 43개, 실패·오류·건너뜀 모두 0이다. 앱 테스트 범위이며 실제 ADB/모델 연결이나 foundation 전체 자체 테스트를 의미하지 않는다. 버전 고정 소스 읽기, 결과·로그·보고서·wheel 업로드 IAM도 이 실행에서 통과했다.
+
+| 산출물 | 크기(bytes) | SHA-256 |
+|---|---:|---|
+| devmrko_python_foundation-0.1.2-py3-none-any.whl | 19,998 | e5d2ffb644699f76d831c71e6ec8626a734dd078da0956938e868ad1f1d0132e |
+| launchpad_service_desk-0.6.0-py3-none-any.whl | 18,923 | 4375bab9dfb46664683aefb0a434370d352d09b80df3f48464871774fd157f20 |
+
+Object Storage에서 두 wheel을 내려받아 결과 JSON의 크기·SHA-256과 일치함을 확인했다. 결과 JSON의 핸들러 경과 시간은 11.86초이고 콜드 스타트를 포함한 전체 대기 시간은 아니다. 종료 시 작업 파일 크기 합은 103,219,800 bytes이며 최고 디스크 사용량이 아니다. cgroup max_usage 관측은 162,578,432 bytes로, 컨테이너 생애 동안의 최대값이므로 빌드 한 건만의 최고 사용량으로 단정하지 않는다.
+
+후속 보완: 기본 probe에 빌드 보조 모듈 로딩 검사를 추가하고, 결과 생성 전 Function 실패가 Companion에서 WAITING으로 남는 경우를 호출 로그와 연결해 구분해야 한다. 새 wheel의 VM 배포·실제 에이전트 검증·OKE 배포는 별도 단계로 남아 있다.
