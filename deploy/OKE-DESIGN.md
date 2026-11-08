@@ -22,7 +22,7 @@ Companion은 OCI DevOps 실행·상태 조회와 외부 도구 연결을 제공�
 
 ## VM 코드를 그대로 복제할 수 없는 부분
 
-기존 VM 릴리스의 `planning.py`는 instance/config 인증만 지원하고 `memory_backend.py`는 VM instance principal을 고정 사용한다. `DESK_OCI_AUTH=oke`를 명시적으로 선택하는 공통 클라이언트 생성 경로를 두고 모델과 임베딩 양쪽에 연결해야 한다. 선택한 인증이 실패하면 VM 인증이나 로컬 API 키로 자동 우회하지 않는다. 기존 VM 기본값은 유지한다.
+0.6.0 릴리스는 `DESK_OCI_AUTH=oke`를 명시적으로 선택하는 공통 클라이언트 생성 경로를 모델과 임베딩 양쪽에 연결했다. 선택한 인증이 실패하면 VM 인증이나 로컬 API 키로 자동 우회하지 않는다. 기존 VM 기본값은 유지한다.
 
 Oracle Python SDK의 OKE signer를 사용한다. workload identity는 Enhanced cluster를 전제로 계획하며 클러스터·namespace·ServiceAccount를 IAM 조건으로 제한한다. OCI 모델 호출 리전과 OKE 실행 리전은 별도 입력이다. 실제 설치한 SDK 버전의 signer 및 서비스 지원을 배포 전에 확인한다.
 
@@ -62,8 +62,8 @@ ADB 접근 ACL에는 실제 OKE 송신 경로를 반영해야 한다. Pod 주소
 
 ## 구현 진척과 검증 한계
 
-2026-11-08 소스에 `oci_client.py`를 추가해 모델과 임베딩의 클라이언트 생성을 통합했다. `DESK_OCI_AUTH`는 instance(기본), config, oke를 명시적으로 지원하며 OKE 인증 실패를 다른 인증으로 우회하지 않는다. 이 변경은 로컬 소스에만 있고 기존 VM의 0.5.0 패키지는 교체하지 않았다. 다음 컨테이너 릴리스 때 별도 버전과 출처로 빌드한다.
+2026-11-08 소스에 `oci_client.py`를 추가해 모델과 임베딩의 클라이언트 생성을 통합했다. `DESK_OCI_AUTH`는 instance(기본), config, oke를 명시적으로 지원하며 OKE 인증 실패를 다른 인증으로 우회하지 않는다. 이 변경이 포함된 0.6.0을 OCI Functions에서 빌드하고 Companion을 통해 VM에 배포했다. VM의 모델·메모리·Langfuse 검사까지 통과했다. OKE에는 같은 검증 산출물을 컨테이너로 포장하되 workload identity는 별도 실측한다.
 
-인증 선택, 실패 시 우회 금지, 모델·임베딩의 입력 연결을 테스트한다. 선택적 메모리 패키지가 없는 로컬에서는 해당 import만 테스트 대역으로 대체하고 인증 팩터리 진입에서 종료한다. 실제 OKE 토큰 교환이나 OCI 권한 성공을 증명하는 테스트는 아니다. 클러스터·컨테이너·Companion OKE 지원은 아직 미구현이다.
+인증 선택, 실패 시 우회 금지, 모델·임베딩의 입력 연결을 테스트한다. 선택적 메모리 패키지가 없는 로컬에서는 해당 import만 테스트 대역으로 대체하고 인증 팩터리 진입에서 종료한다. 실제 OKE 토큰 교환이나 OCI 권한 성공을 증명하는 테스트는 아니다. 클러스터·컨테이너 배포·Companion OKE 실행 지원은 아직 완료되지 않았다. Kubernetes 명세 생성기는 구현했으며 입력 차단과 단일 Pod·비밀 참조 계약을 로컬에서 검증했다. 사용 방법과 남은 적용 조건은 [OKE 명세 준비](OKE-MANIFESTS.md)를 참조한다.
 
 프로비저닝 용량은 [설치·작업 공간 산정](CAPACITY.md)을 먼저 적용한다. 노드 이미지 저장 공간, Pod 임시 저장 공간, PVC 데이터 용량을 분리하며 여유 공간만 보고 기존 관측 서버에 빌드를 공존시키지 않는다.
