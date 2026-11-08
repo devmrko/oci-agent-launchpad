@@ -90,3 +90,19 @@ python deploy/build_container.py \
 계획에는 빌드 중 컨텍스트 전송 복사본, 이미지 압축 해제, 설치 가상환경 및 레이어, 보관 이미지가 동시에 존재할 공간을 포함해야 한다. 생성된 컨텍스트는 신뢰하는 빌드 입력으로 취급하며, 이 래퍼가 임의 Dockerfile을 안전하게 만드는 것은 아니다. 사용량 검사와 빌드 사이의 외부 작업을 예약·차단하지 않으므로 전용 러너와 동시성 제한이 필요하다. CPU·RAM·inode·I/O 검사는 별도다.
 
 2026-11-08 관련 테스트 18개가 통과했다. 동일 디스크의 개별 예산은 통과하지만 합계가 부족한 경우, 부족 시 Docker build 미호출, 정상 경로의 고정 endpoint·digest 전달을 검증했다. Docker 명령은 테스트 대역을 사용했으므로 이미지 빌드 성공을 뜻하지 않는다. 실제 기존 Langfuse 서버는 DockerRootDir=/var/lib/docker, overlayfs, io.containerd.snapshotter.v1로 확인됐고 buildx 명령도 없었다. 이 서버에서 앱 빌드는 실행하지 않았다. 다음 실측은 저장 구조와 예산을 확인한 전용 OCI DevOps 러너에서 수행한다.
+
+## OCI 관리형 러너에서 먼저 확인할 정보
+
+Oracle Linux 8 관리형 러너는 Podman을 제공하므로 Docker 소켓·buildx 전용 래퍼를 그대로 적용하지 않는다. [공식 런타임 목록](https://docs.oracle.com/en-us/iaas/Content/devops/using/runtime_details.htm)과 [빌드 단계 설정](https://docs.oracle.com/en-us/iaas/Content/devops/using/add_buildstage.htm)을 확인했다. SDK의 러너 설정은 OCPU와 메모리를 지정하지만 이번 경로에서 디스크 크기를 지정하는 입력은 확인하지 못했다. 따라서 처음에는 읽기 전용 조사 실행으로 실제 제공량을 확인하고, 산정량 미달이면 이미지 빌드를 시작하지 않는 경로가 필요하다.
+
+`probe_build_runner.py`와 `build_probe_spec.yml`은 패키지를 설치하거나 이미지를 빌드하지 않고 workspace, /tmp, Podman graphRoot/runRoot의 장치·전체/여유 바이트·여유 inode를 수집한다. CPU 표시값과 이용 가능한 cgroup v2 제한도 남긴다. cgroup v2 항목이 비어 있으면 제한이 없다는 뜻이 아니라 미확인이다. 전체 Podman 정보나 환경변수를 로그에 내보내지 않는다. 조사 테스트 1개는 실제 임시 디렉터리 파일시스템 조회와 불필요한 엔진 필드 제외를 검증했다.
+
+2026-11-08 서울 구획의 별도 파이프라인 `launchpad-container-capacity-probe`를 준비했다. 기존 VM 배포용 main 브랜치는 변경하지 않고 `runner-capacity-probe-060` 브랜치를 사용했다. Companion 화면에서 소스 커밋 `b1aa043e375db0ac82c20e34cb542851abd2de0b`를 선택해 `launchpad-060-runner-capacity`를 실행했다. 실행 ID는 `ocid1.devopsbuildrun.oc1.ap-seoul-1.amaaaaaavsea7yiakpzb5nyo6igfzl7dohnqmetg5llbl6jips6ja2r5ytua`다. Registry 전달·앱 배포 단계는 없다. 실행 상태는 비공개 `.run/oci-launchpad/runner-probe-run.json`에 보관한다. 접수나 러너 확보 중 상태를 용량 실측 성공으로 표시하지 않는다.
+
+### 관리형 러너 실측 결과와 마운트 중복 계산 방지
+
+위 Companion 조사 실행은 SUCCEEDED였다. 결과는 `.run/oci-launchpad/runner-capacity-observed.json`에 저장했다. Podman 4.9.4-rhel/overlay, workspace=/workspace/source, graphRoot=/var/lib/containers/storage, runRoot=/run/containers/storage였다. 각 경로의 보고된 전체 용량은 74,930,540,544바이트(약 69.8GiB), 여유는 38,802,763,776바이트(약 36.1GiB)였다. 요청 shape는 2 OCPU/8GB지만 프로세스 cgroup memory.max는 7,218,343,936바이트(약 6.72GiB), memory.current는 약 0.88GiB였고 cpu.max는 360000/100000이었다. 한 번의 실행 관측이며 다음 러너에서도 같다고 보장하지 않는다.
+
+workspace·graphRoot의 device는 64519, /tmp·runRoot는 43인데 용량 수치는 같았다. 장치 번호가 다르다고 독립 디스크라고 결론 내릴 수 없다. 물리 backing 관계는 이 조사만으로 증명하지 못했으므로 다음 예산은 네 경로 모두 `backing_group: "managed-runner-root"`로 보수적으로 합산한다. `build_capacity.py`는 동일 장치 또는 동일 backing_group 중 어느 하나라도 일치하면 같은 예산 그룹으로 병합한다. 그룹 내 보고된 여유·전체 용량의 최소값을 사용한다. 경로 이름만 달리해 같은 공간을 두 번 사용 가능하다고 판단하지 않는다.
+
+다음 실제 이미지 빌드는 아직 미실행이다. 러너 제공 여유 36.1GiB를 기준으로 소스 빌드·wheelhouse·테스트 환경·이미지 레이어·임시 복사본의 동시 최대량을 계산하고, 같은 실행 안에서 Podman 빌드 직전 다시 검사해야 한다. 이번 조사 성공은 용량 충분 판정이나 컨테이너 실행 성공이 아니다.

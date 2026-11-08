@@ -64,3 +64,26 @@ def test_local_driver_build_uses_fixed_endpoint_and_pinned_base(tmp_path, monkey
     assert '--load' in command
     assert 'DOCKER_HOST' not in runner.call_args.kwargs['env']
     assert 'BUILDX_BUILDER' not in runner.call_args.kwargs['env']
+
+
+def test_overlay_mounts_with_shared_backing_are_combined(tmp_path, monkeypatch):
+    first = tmp_path / 'workspace'; first.mkdir()
+    second = tmp_path / 'overlay'; second.mkdir()
+    original = Path.stat
+    class DifferentDevice:
+        def __init__(self, value):
+            self.value = value
+            self.st_dev = value.st_dev + 1
+        def __getattr__(self, key):
+            return getattr(self.value, key)
+    def patched(path, **kw):
+        value = original(path, **kw)
+        return DifferentDevice(value) if path == second else value
+    monkeypatch.setattr(Path, 'stat', patched)
+    usage = namedtuple('usage', 'total used free')
+    monkeypatch.setattr('build_capacity.shutil.disk_usage', lambda p: usage(100*1024**3, 90*1024**3, 10*1024**3))
+    a, b = entry(first, 6), entry(second, 6)
+    a['backing_group'] = b['backing_group'] = 'conservative-runner-disk'
+    report = preflight([a, b])
+    assert report['result'] == 'INSUFFICIENT'
+    assert len(report['filesystems']) == 1
