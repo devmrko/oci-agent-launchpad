@@ -93,11 +93,30 @@ resource "oci_core_route_table" "private" {
     destination_type  = "SERVICE_CIDR_BLOCK"
     network_entity_id = oci_core_service_gateway.oci.id
   }
+  dynamic "route_rules" {
+    for_each = var.private_peer == null ? toset([]) : var.private_peer.destination_cidrs
+    content {
+      destination       = route_rules.value
+      destination_type  = "CIDR_BLOCK"
+      network_entity_id = var.private_peer.gateway_id
+    }
+  }
 }
 resource "oci_core_security_list" "api" {
   compartment_id = var.compartment_id
   vcn_id         = oci_core_vcn.oke.id
   display_name   = "${var.name}-api"
+  dynamic "ingress_security_rules" {
+    for_each = var.private_peer == null ? [] : [var.private_peer.operator_cidr]
+    content {
+      protocol = "6"
+      source   = ingress_security_rules.value
+      tcp_options {
+        min = 6443
+        max = 6443
+      }
+    }
+  }
   dynamic "ingress_security_rules" {
     for_each = toset([6443, 12250])
     content {
@@ -188,6 +207,11 @@ resource "oci_containerengine_node_pool" "app" {
   name               = "${var.name}-nodes"
   kubernetes_version = var.kubernetes_version
   node_shape         = var.node_shape
+  node_metadata = {
+    user_data = base64encode(templatefile("${path.module}/node-init.sh.tftpl", {
+      required_root_bytes = local.required_gib * 1073741824
+    }))
+  }
   node_shape_config {
     ocpus         = var.node_ocpus
     memory_in_gbs = var.node_memory_gb

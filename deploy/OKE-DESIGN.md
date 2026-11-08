@@ -81,3 +81,5 @@ Terraform 입력은 리전·구획·VCN CIDR·버전·지원 노드 이미지·s
 Companion에서 실행한 세 번째 컨테이너 빌드가 SUCCEEDED이고 OCIR 게시를 완료했다. Functions 소스 빌드 `b874b66b-9c95-43b5-a0c1-8c07a32d8afe`의 0.6.0 패키지를 사용했다. 고정 이미지 digest는 `sha256:582a4752781f2be864542f8644e81855a3a08650069dd7f0edfac6f1ef6c6c2d`다. 컨테이너 기본 명령으로 기동하여 `/health` 200과 버전 0.6.0을 확인했다. 합성 인증·모델 설정을 사용했으며 외부 모델·ADB·Langfuse는 이 검사에서 확인하지 않았다.
 
 비공개 DevOps 배포 환경과 전용 파이프라인은 [별도 Terraform 구성](../infra/terraform/oke-delivery/README.md)으로 관리한다. 앱 배포 단계는 비밀 주입·권한·통신 준비 후 추가한다.
+
+2026-11-08 후속 확인: Bastion은 테넌시 할당량으로 생성하지 못해 기존 관측 서버와의 비공개 피어링을 구성했다. API 인증서 검증을 유지한 운영 터널로 Kubernetes 노드 Ready를 확인했다. 100GB 부트 볼륨의 실제 루트는 처음 29.4GiB였고, 확장 후 82.8GiB/여유 71.3GiB를 확인했다. 노드 초기화 템플릿에도 자동 확장과 실제 용량 검사를 추가했다. 임시 관리자 Pod는 삭제했다. **앱 배포, Secret·IAM, ADB·Langfuse 실제 연결 검증은 여전히 미완료**다.

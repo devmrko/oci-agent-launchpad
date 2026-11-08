@@ -37,3 +37,15 @@ API 보안 목록은 전용 VCN에서 6443/12250만 수신한다. 노드는 같�
 2026-11-08 provider 8.29.0 스키마 검증과 mock 계획 테스트 4개 통과. 실제 서울 계획은 11개 생성, 변경·삭제 0개였으며 적용을 완료했다. OCI API에서 클러스터와 첫 노드 ACTIVE를 확인했다. 아직 Kubernetes 노드 Ready·모델·메모리·관측 연결 성공을 의미하지 않는다.
 
 근거: [Oracle Cluster Terraform 리소스](https://docs.oracle.com/en-us/iaas/tools/terraform-provider-oci/latest/docs/r/containerengine_cluster.html), [Node Pool 리소스](https://docs.oracle.com/en-us/iaas/tools/terraform-provider-oci/latest/docs/r/containerengine_node_pool.html).
+
+## 실제 파일시스템 용량과 비공개 운영 접근
+
+2026-11-08 실제 노드는 Ready였지만 100GB 부트 볼륨의 루트 파일시스템은 29.4GiB에 그쳤다. 이미지도 같은 파일시스템을 사용했다. `oci-growfs -y`와 kubelet 재시작 후 용량 88,944,410,624 bytes(약 82.8GiB), 여유 76,555,526,144 bytes(약 71.3GiB)를 확인했다. 볼륨 크기와 게스트의 사용 가능 공간은 별도로 검사해야 한다.
+
+`node-init.sh.tftpl`은 새 노드에서 루트를 확장하고 `node_capacity` 합계 이상의 실제 루트 용량을 확인한 뒤 OKE 기본 초기화를 실행한다. 이미지별 별도 파티션(/var/oled 등)이 공간을 차지하므로 볼륨 예산만 통과하고 실제 루트 예산이 부족할 수 있다. 이 경우 초기화가 실패하도록 차단한다. 운영 전에는 부트 볼륨을 더 크게 산정해야 한다. 기존 노드에 metadata를 갱신해도 cloud-init이 다시 실행되지는 않는다. 이번 기존 노드는 수동 확장을 검증했으며 새 노드 자동 초기화는 아직 실측하지 않았다.
+
+`private_peer`는 선택 입력이다. 피어링 gateway, 목적지 /32 목록, 운영자 사설 /32를 받는다. 기존 NAT와 Service Gateway 경로를 보존하고 API 6443 접근만 추가한다. 이번에는 관측 서버를 통해 로컬에만 바인딩한 SSH 터널을 만들고, 원래 API 주소를 TLS server name으로 지정해 인증서 검증을 유지했다. API 공인 주소나 인터넷 입력 규칙은 만들지 않았다.
+
+검증: Terraform 모의 provider 테스트 6개 통과, 실제 피어링 경유 Kubernetes API 접속 및 노드 Ready 확인. 진단·확장에 사용한 임시 관리자 Pod 두 개는 삭제했다. 이 결과는 앱·모델·메모리·Langfuse 연결 검증을 대신하지 않는다.
+
+근거: [Oracle OKE 노드 루트 확장](https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contengextendingrootpartitionmanually.htm), [OKE 초기화 스크립트](https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contengusingcustomcloudinitscripts.htm).

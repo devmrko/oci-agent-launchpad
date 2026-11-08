@@ -52,3 +52,33 @@ run "reject_pod_network_collision" {
   variables { vcn_cidr = "10.244.0.0/16" }
   expect_failures = [var.vcn_cidr]
 }
+
+run "restricted_private_peer" {
+  command = apply
+  variables {
+    private_peer = {
+      gateway_id = "ocid1.localpeeringgateway.oc1.test"
+      destination_cidrs = ["10.78.1.46/32", "10.78.1.99/32"]
+      operator_cidr = "10.78.1.99/32"
+    }
+  }
+  assert {
+    condition = length(oci_core_route_table.private.route_rules) == 4
+    error_message = "Preserve NAT and service routes alongside the two peer destinations."
+  }
+  assert {
+    condition = length([for r in oci_core_security_list.api.ingress_security_rules : r if r.source == "10.78.1.99/32" && r.tcp_options[0].min == 6443 && r.tcp_options[0].max == 6443]) == 1
+    error_message = "Operator access must be exact IP and API port."
+  }
+  assert {
+    condition = strcontains(base64decode(oci_containerengine_node_pool.app.node_metadata.user_data), "/usr/libexec/oci-growfs -y") && strcontains(base64decode(oci_containerengine_node_pool.app.node_metadata.user_data), "73014444032")
+    error_message = "New nodes must grow and verify the 68 GiB root budget before joining."
+  }
+}
+run "reject_broad_operator_peer" {
+  command = plan
+  variables {
+    private_peer = { gateway_id = "test", destination_cidrs = ["10.78.1.46/32"], operator_cidr = "0.0.0.0/0" }
+  }
+  expect_failures = [var.private_peer]
+}

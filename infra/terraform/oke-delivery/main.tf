@@ -31,3 +31,23 @@ resource "oci_devops_deploy_pipeline" "oke" {
 }
 output "environment_id" { value = oci_devops_deploy_environment.oke.id }
 output "pipeline_id" { value = oci_devops_deploy_pipeline.oke.id }
+
+variable "operator_access" {
+  description = "Optional temporary operator path; exact public IPv4 /32 allowlist only"
+  type        = object({ compartment_id = string, client_cidrs = set(string) })
+  default     = null
+  validation {
+    condition     = var.operator_access == null ? true : (length(var.operator_access.client_cidrs) > 0 && alltrue([for c in var.operator_access.client_cidrs : can(cidrhost(c, 0)) && can(regex("^[0-9.]+/32$", c))]))
+    error_message = "Operator access requires at least one exact IPv4 /32."
+  }
+}
+resource "oci_bastion_bastion" "operator" {
+  count                        = var.operator_access == null ? 0 : 1
+  bastion_type                 = "STANDARD"
+  compartment_id               = var.operator_access.compartment_id
+  target_subnet_id             = var.private_subnet_id
+  client_cidr_block_allow_list = var.operator_access.client_cidrs
+  name                         = "launchpadokeoperator"
+  max_session_ttl_in_seconds   = 3600
+}
+output "bastion_id" { value = try(oci_bastion_bastion.operator[0].id, null) }
