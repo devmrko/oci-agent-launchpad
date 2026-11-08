@@ -34,6 +34,6 @@ API 보안 목록은 전용 VCN에서 6443/12250만 수신한다. 노드는 같�
 
 ## 검증 범위
 
-2026-11-08 provider 8.29.0 스키마 검증과 mock 계획 테스트 4개 통과. 실제 서울 계획은 11개 생성, 변경·삭제 0개였으며 적용을 시작했다. 아직 노드 Ready·모델·메모리·관측 연결 성공을 의미하지 않는다.
+2026-11-08 provider 8.29.0 스키마 검증과 mock 계획 테스트 4개 통과. 실제 서울 계획은 11개 생성, 변경·삭제 0개였으며 적용을 완료했다. OCI API에서 클러스터와 첫 노드 ACTIVE를 확인했다. 아직 Kubernetes 노드 Ready·모델·메모리·관측 연결 성공을 의미하지 않는다.
 
 근거: [Oracle Cluster Terraform 리소스](https://docs.oracle.com/en-us/iaas/tools/terraform-provider-oci/latest/docs/r/containerengine_cluster.html), [Node Pool 리소스](https://docs.oracle.com/en-us/iaas/tools/terraform-provider-oci/latest/docs/r/containerengine_node_pool.html).

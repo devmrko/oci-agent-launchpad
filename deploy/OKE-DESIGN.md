@@ -64,7 +64,7 @@ ADB 접근 ACL에는 실제 OKE 송신 경로를 반영해야 한다. Pod 주소
 
 2026-11-08 소스에 `oci_client.py`를 추가해 모델과 임베딩의 클라이언트 생성을 통합했다. `DESK_OCI_AUTH`는 instance(기본), config, oke를 명시적으로 지원하며 OKE 인증 실패를 다른 인증으로 우회하지 않는다. 이 변경이 포함된 0.6.0을 OCI Functions에서 빌드하고 Companion을 통해 VM에 배포했다. VM의 모델·메모리·Langfuse 검사까지 통과했다. OKE에는 같은 검증 산출물을 컨테이너로 포장하되 workload identity는 별도 실측한다.
 
-인증 선택, 실패 시 우회 금지, 모델·임베딩의 입력 연결을 테스트한다. 선택적 메모리 패키지가 없는 로컬에서는 해당 import만 테스트 대역으로 대체하고 인증 팩터리 진입에서 종료한다. 실제 OKE 토큰 교환이나 OCI 권한 성공을 증명하는 테스트는 아니다. 클러스터·컨테이너 배포·Companion OKE 실행 지원은 아직 완료되지 않았다. Kubernetes 명세 생성기는 구현했으며 입력 차단과 단일 Pod·비밀 참조 계약을 로컬에서 검증했다. 사용 방법과 남은 적용 조건은 [OKE 명세 준비](OKE-MANIFESTS.md)를 참조한다.
+인증 선택, 실패 시 우회 금지, 모델·임베딩의 입력 연결을 테스트한다. 선택적 메모리 패키지가 없는 로컬에서는 해당 import만 테스트 대역으로 대체하고 인증 팩터리 진입에서 종료한다. 실제 OKE 토큰 교환이나 OCI 권한 성공을 증명하는 테스트는 아니다. 클러스터·컨테이너 배포·Companion의 범용 OKE 대상 검증·실행 코드는 구현하고 로컬 테스트를 통과했지만 실제 OKE 배포 실행은 아직 검증하지 않았다. Kubernetes 명세 생성기는 구현했으며 입력 차단과 단일 Pod·비밀 참조 계약을 로컬에서 검증했다. 사용 방법과 남은 적용 조건은 [OKE 명세 준비](OKE-MANIFESTS.md)를 참조한다.
 
 프로비저닝 용량은 [설치·작업 공간 산정](CAPACITY.md)을 먼저 적용한다. 노드 이미지 저장 공간, Pod 임시 저장 공간, PVC 데이터 용량을 분리하며 여유 공간만 보고 기존 관측 서버에 빌드를 공존시키지 않는다.
 
@@ -73,3 +73,11 @@ ADB 접근 ACL에는 실제 OKE 송신 경로를 반영해야 한다. Pod 주소
 첫 클러스터는 기존 `document_search`와 분리하고 전용 VCN, Enhanced cluster, AMD64 관리형 노드 풀을 만든다. Kubernetes API와 노드는 모두 비공개 서브넷에 둔다. OCI 서비스에는 Service Gateway, 외부 이미지·업데이트에는 NAT Gateway를 사용한다. API 6443/12250 접근은 전용 VCN 내부로 제한하고 노드 간 트래픽과 API→kubelet 통신만 내부에서 허용한다. DevOps private network channel과 운영자의 비공개 접근 경로는 별도 연결해야 하며, 이 단계에서 API 공개 주소나 외부 앱 LoadBalancer를 만들지 않는다.
 
 Terraform 입력은 리전·구획·VCN CIDR·버전·지원 노드 이미지·shape·가용 도메인·노드 수·노드 디스크 예산이다. 메모리 설정과 비밀값은 넣지 않는다. 이미지 교체/운영체제/로그/임시 작업/여유를 합한 예산보다 부트 볼륨이 작으면 계획을 차단한다. 첫 1노드·1Pod는 기능 검증용이며 HA를 의미하지 않는다. ADB 송신 ACL, Langfuse 피어링, workload IAM, Vault 주입, PVC와 배포는 후속 연결이다.
+
+## 실제 준비 결과 (2026-11-08)
+
+전용 비공개 클러스터와 1개 노드는 OCI API에서 ACTIVE이며 인프라 Terraform 적용을 완료했다. Kubernetes Ready와 실제 노드 파일시스템 여유는 별도 확인이 필요하다.
+
+Companion에서 실행한 세 번째 컨테이너 빌드가 SUCCEEDED이고 OCIR 게시를 완료했다. Functions 소스 빌드 `b874b66b-9c95-43b5-a0c1-8c07a32d8afe`의 0.6.0 패키지를 사용했다. 고정 이미지 digest는 `sha256:582a4752781f2be864542f8644e81855a3a08650069dd7f0edfac6f1ef6c6c2d`다. 컨테이너 기본 명령으로 기동하여 `/health` 200과 버전 0.6.0을 확인했다. 합성 인증·모델 설정을 사용했으며 외부 모델·ADB·Langfuse는 이 검사에서 확인하지 않았다.
+
+비공개 DevOps 배포 환경과 전용 파이프라인은 [별도 Terraform 구성](../infra/terraform/oke-delivery/README.md)으로 관리한다. 앱 배포 단계는 비밀 주입·권한·통신 준비 후 추가한다.
