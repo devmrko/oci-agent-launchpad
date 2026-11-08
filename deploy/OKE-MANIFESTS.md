@@ -81,3 +81,5 @@ startup/readiness는 `/health`에서 로컬 SQLite 연결을 확인한다. liven
 첫 실행은 이미지 생성·`pip check`·주요 import까지 성공했으나, 기동 검사 명령의 `--tmpfs /data:uid=10001,gid=10001,mode=0700`를 OCI 실행기가 `unknown mount option`으로 거부했다(종료 코드 125). 이미지 생성 성공을 배포 가능 판정으로 간주하지 않고 전달 단계를 차단했다.
 
 검사 전용 `/data`·`/tmp`를 `rw,mode=1777`인 독립 tmpfs로 변경했다. 앱은 여전히 UID 10001, 읽기 전용 루트, capability 제거 상태로 실행한다. 임시 디렉터리는 해당 검사 컨테이너 수명에 한정되며 실제 OKE의 PVC·fsGroup 설정을 대체하지 않는다. 수정본 `136bc59`를 Companion에서 `service-desk-060-oke-image-2`로 재실행했다. 재실행의 기동 검사와 OCIR 게시 결과는 아직 확인 중이다.
+
+두 번째 실행은 tmpfs 옵션을 통과했으나 합성 모드의 필수 `DESK_DEMO_ACCOUNTS` 누락으로 앱 시작에 실패했다. 로그의 종료 코드 137만 보고 메모리 부족으로 단정하지 않고 실제 `ValueError`를 확인했다. 검사 실행 시 무작위 임시 토큰과 합성 subject를 생성해 주입하고, demo 인증·모델 모드를 명시했다. 같은 환경 입력과 빌드에 사용한 foundation 소스로 로컬 `/health`의 UP·0.6.0을 확인했다. 로컬 검증은 Linux 컨테이너 검증을 대체하지 않는다. 수정 소스 `5397c2e`의 세 번째 빌드를 Companion에서 시작했으며 결과는 아직 확인 중이다.
