@@ -69,6 +69,24 @@ python deploy/prepare_container.py \
   --capacity-plan /protected/context-capacity.json
 ```
 
-Python 관련 검사 22개와 Terraform mock 계획 검사 6개가 통과했다. 실제 공간 부족을 테스트 대역으로 공급했을 때 출력 디렉터리가 만들어지지 않는 것도 확인했다. 실제 디스크를 가득 채우는 시험이나 컨테이너 빌드의 최고 사용량 실측은 하지 않았다. Companion 표시·Docker 빌드 사전 검사·OKE 노드 자원 연결은 남은 작업이다.
+Python 관련 검사 22개와 Terraform mock 계획 검사 6개가 통과했다. 실제 공간 부족을 테스트 대역으로 공급했을 때 출력 디렉터리가 만들어지지 않는 것도 확인했다. 실제 디스크를 가득 채우는 시험이나 컨테이너 빌드의 최고 사용량 실측은 하지 않았다. Companion 표시·OKE 노드 자원 연결은 남은 작업이다. Docker 빌드 사전 검사는 아래 제한된 실행 경로에 연결했다.
 
 기존 `deploy/provision_demo.py` SDK 경로도 같은 `runtime_capacity_plan`과 명시적인 정수 `boot_volume_gb`를 요구한다. 고정 50GB 할당을 제거했으며 잘못된 입력에서는 OCI 프로파일 조회·클라이언트 생성·리소스 생성 전에 실패한다. 기존 VM의 실제 볼륨을 자동으로 확장하지는 않는다. 이 실패 순서는 스크립트 전체 진입 테스트로 확인했다.
+
+## Docker 빌드 전 파일시스템 합산 검사
+
+`build_capacity.py`는 `storage` 배열의 각 `{ "path": "<실제 기존 디렉터리>", "plan": <앞의 용량 계획> }`을 받는다. 경로의 실제 장치 ID로 묶어 growth·transient를 합산한다. 같은 장치의 OS 등 resident 항목은 입력에서 한 번만 계산하며, 여유분은 해당 장치 계획 중 최대값을 적용한다. 서로 다른 장치에 빈 공간이 있어도 부족한 장치를 대신하지 않는다.
+
+```sh
+python deploy/build_capacity.py --config /protected/build-storage.json
+python deploy/build_container.py \
+  --context /work/prepared-context \
+  --capacity-config /protected/build-storage.json \
+  --tag launchpad-service-desk:0.6.0-test
+```
+
+빌드 래퍼는 실제 Linux Docker 호스트에서만 사용한다. 고정 로컬 소켓으로 DockerRootDir을 조회하고, 계획에 DockerRootDir 및 컨텍스트 경로가 포함됐는지 검사한다. 기존 default buildx의 docker 드라이버만 지원하며 원격 builder·Docker Desktop·별도 containerd 이미지 저장소는 지원하지 않고 거부한다. 환경변수로 선택한 다른 Docker 호스트나 builder를 계승하지 않는다. 검사를 통과한 경우에만 digest로 고정된 기본 이미지와 linux/amd64 대상으로 buildx build --load를 실행한다. Registry push나 OCI 배포는 수행하지 않는다.
+
+계획에는 빌드 중 컨텍스트 전송 복사본, 이미지 압축 해제, 설치 가상환경 및 레이어, 보관 이미지가 동시에 존재할 공간을 포함해야 한다. 생성된 컨텍스트는 신뢰하는 빌드 입력으로 취급하며, 이 래퍼가 임의 Dockerfile을 안전하게 만드는 것은 아니다. 사용량 검사와 빌드 사이의 외부 작업을 예약·차단하지 않으므로 전용 러너와 동시성 제한이 필요하다. CPU·RAM·inode·I/O 검사는 별도다.
+
+2026-11-08 관련 테스트 18개가 통과했다. 동일 디스크의 개별 예산은 통과하지만 합계가 부족한 경우, 부족 시 Docker build 미호출, 정상 경로의 고정 endpoint·digest 전달을 검증했다. Docker 명령은 테스트 대역을 사용했으므로 이미지 빌드 성공을 뜻하지 않는다. 실제 기존 Langfuse 서버는 DockerRootDir=/var/lib/docker, overlayfs, io.containerd.snapshotter.v1로 확인됐고 buildx 명령도 없었다. 이 서버에서 앱 빌드는 실행하지 않았다. 다음 실측은 저장 구조와 예산을 확인한 전용 OCI DevOps 러너에서 수행한다.
