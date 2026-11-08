@@ -33,3 +33,15 @@ Linux ARM/Python 3.12용 공개 의존성 95개 wheel 다운로드를 완료했�
   --launchpad-revision <40자리 커밋> \
   --output /path/to/new-source-bundle.tgz
 ```
+
+## 전용 이미지 제작 경로와 IAM 확인
+
+2026-11-08 서울의 launchpad-python-function-image 파이프라인을 만들고 Companion 화면에서 고정 커밋 ae8bf99d3e8871cd062a6b6554dc0795df09a7bc로 실행했다. 사용자 소스 빌드가 아니라 Function 실행 이미지를 처음 만드는 단계다. OCI 비공개 저장소의 python-function-image-060 브랜치에 빌더 코드와 공개 의존성 잠금 파일을 게시했다. GitHub에는 push하지 않았다.
+
+관리형 러너가 x86이므로 Python 전용 Application도 GENERIC_X86으로 준비했다. 공식 Python 3.12 amd64 베이스 digest는 sha256:268cf2b851b1f5480611d8cfee4d036a1a7ee95cf02d3295f36c520e91e14a11로 고정했다. ARM 사전 다운로드 수치는 x86 설치 실측으로 일반화하지 않는다. 용량 사전 검사는 이미지/레이어 4GiB + 설치/중간 파일 4GiB + 전달/내보내기 4GiB + 예비 4GiB의 보수적 예산을 적용한다. 이 예산은 최고 사용량 실측이 아니다. 실제 러너에서 여유 38,802,616,320 bytes, 메모리 한도 7,218,348,032 bytes를 확인하고 검사를 통과했다.
+
+비공개 버킷 launchpad-python-function-sources는 버전 관리를 켰으며 결과는 별도 launchpad-python-function-results에 저장한다. 이미지 게시 대상도 전용 비공개 OCIR 저장소 launchpad/python-function-builder다. 이미지 제작 성공, 전달 성공, 고정 digest 확인 전에는 Function 생성 스크립트가 진행하지 않는다.
+
+IAM 레슨런: devops-artifacts라는 잘못된 리소스 이름으로 정책을 만들면 API가 400 No permissions found로 거부했다. 이를 권한 부족으로 단정해 더 넓은 권한을 부여하지 않았다. [공식 DevOps 정책 문서](https://docs.oracle.com/en-us/iaas/Content/devops/using/devops_iampolicies.htm)를 확인하고 DEVOPS_DEPLOY_ARTIFACT_READ를 명시한 정책으로 생성에 성공했다. 이미지 게시 권한은 해당 build pipeline ID와 target.repo.name으로 제한했다. 정책 생성 성공과 실제 이미지 전달 성공은 별도로 확인해야 한다.
+
+SSH 게시 시에는 기존에 공식 fingerprint와 대조한 scm_known_hosts와 OCI에 등록된 사용자 SSH 키 설정을 사용한다. 일반 git push가 Host key verification failed로 실패했을 때 StrictHostKeyChecking을 끄지 않고 기존 검증 설정을 적용했다.
