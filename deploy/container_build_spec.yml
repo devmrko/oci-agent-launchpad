@@ -30,7 +30,7 @@ steps:
       subprocess.run(['podman','--remote=false','build','--platform','linux/amd64','--build-arg','BASE_IMAGE='+b['base_image'],'-t','localhost/launchpad-service-desk:verified','container'],check=True)
       PY
       podman run --rm --entrypoint python localhost/launchpad-service-desk:verified -c 'import service_desk.app, python_foundation, oracleagentmemory; print("Runtime imports passed")'
-      cid=$(podman run -d --read-only --cap-drop=ALL --security-opt=no-new-privileges --tmpfs /data:uid=10001,gid=10001,mode=0700 --tmpfs /tmp:uid=10001,gid=10001,mode=0700 localhost/launchpad-service-desk:verified)
+      cid=$(podman run -d --read-only --cap-drop=ALL --security-opt=no-new-privileges --tmpfs /data:rw,mode=1777 --tmpfs /tmp:rw,mode=1777 localhost/launchpad-service-desk:verified)
       trap 'podman logs "$cid"; podman rm -f "$cid"' EXIT
       podman exec -i "$cid" python - <<'PY'
       import json,time,urllib.request

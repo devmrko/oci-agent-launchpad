@@ -75,3 +75,9 @@ startup/readiness는 `/health`에서 로컬 SQLite 연결을 확인한다. liven
 이 검사는 합성 모드의 기동 검사다. OCI 모델·ADB·Langfuse와의 실제 연결 및 PVC 보존은 증명하지 않는다. `service-desk-image` 출력은 별도 전달 단계에서 전용 비공개 OCIR 저장소로 게시하고, 최종 성공 후 registry digest를 조회해 배포 명세에 넣는다. 빌드 단계 성공만으로 게시 완료로 판단하지 않는다.
 
 2026-11-08 Companion에서 `launchpad-service-desk-image` 파이프라인을 실행했다. 소스는 전용 `oke-service-desk-060` 브랜치, 포장 대상은 Functions 빌드 `b874b66b-9c95-43b5-a0c1-8c07a32d8afe`의 0.6.0이다. 실행 중인 Companion에는 OKE 검증 기능을 반영했고 브라우저에서 기존 VM 대상 확인도 재검증했다. 이 문서 작성 시 이미지 빌드는 실행기 할당 중이며 OKE 미배포다.
+
+### 실제 빌드에서 확인한 Podman 제약
+
+첫 실행은 이미지 생성·`pip check`·주요 import까지 성공했으나, 기동 검사 명령의 `--tmpfs /data:uid=10001,gid=10001,mode=0700`를 OCI 실행기가 `unknown mount option`으로 거부했다(종료 코드 125). 이미지 생성 성공을 배포 가능 판정으로 간주하지 않고 전달 단계를 차단했다.
+
+검사 전용 `/data`·`/tmp`를 `rw,mode=1777`인 독립 tmpfs로 변경했다. 앱은 여전히 UID 10001, 읽기 전용 루트, capability 제거 상태로 실행한다. 임시 디렉터리는 해당 검사 컨테이너 수명에 한정되며 실제 OKE의 PVC·fsGroup 설정을 대체하지 않는다. 수정본 `136bc59`를 Companion에서 `service-desk-060-oke-image-2`로 재실행했다. 재실행의 기동 검사와 OCIR 게시 결과는 아직 확인 중이다.
