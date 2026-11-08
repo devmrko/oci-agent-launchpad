@@ -53,3 +53,5 @@ SSH 게시 시에는 기존에 공식 fingerprint와 대조한 scm_known_hosts�
 Companion 커밋 72f3349는 `/usr/bin/env fdk`로 시작 경로를 수정했다. OCI 소스 커밋 e61bbe3ffd53041753ef06640d62747f7fa5e082의 새 이미지 060-2 빌드는 실제 기본 entrypoint를 띄운 뒤 FN_FORMAT=http-stream, FN_LISTENER=unix:/tmp/fdk-smoke.sock로 probe HTTP 요청까지 보내도록 강화했다. 이 기록 시점에는 재빌드 중이며 Function에서의 수정 검증과 Launchpad 소스 빌드는 아직 완료하지 않았다.
 
 호출 로그는 Application 단위 Functions/invoke 서비스 로그로 활성화한다. OCI SDK의 추상 Source에 service/resource/category를 넣으면 TypeError가 발생하므로 OciService 모델을 사용한다. Logging 활성화와 서비스 로그 ACTIVE를 확인한 후 실패 원인을 수집했다. 컨테이너 이미지 검사 성공과 실제 클라우드 시작 성공을 별도 완료 조건으로 유지한다.
+
+두 번째 빌드에서는 기본 entrypoint로 FDK 서버가 시작됐으나 smoke 검사 자체가 `/`를 호출해 404로 실패했다. 사용한 fdk 0.1.128의 공식 패키지 소스에서 POST `/call` 등록을 확인하고 검사 경로를 수정했다. OCI 커밋 68efecad39d70a32b79dd3a5883d78c2f3165193을 지정한 세 번째 실행 python-function-image-060-3을 Companion에서 접수했다. 두 번째 실행은 전달 단계에 진입하지 않았으므로 미게시 태그 060-2를 그대로 사용한다. 재빌드 성공과 실제 Function probe는 별도로 확인한다.
