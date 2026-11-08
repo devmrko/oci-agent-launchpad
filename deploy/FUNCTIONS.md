@@ -80,3 +80,17 @@ Companion 커밋 72f3349는 `/usr/bin/env fdk`로 시작 경로를 수정했다.
 Object Storage에서 두 wheel을 내려받아 결과 JSON의 크기·SHA-256과 일치함을 확인했다. 결과 JSON의 핸들러 경과 시간은 11.86초이고 콜드 스타트를 포함한 전체 대기 시간은 아니다. 종료 시 작업 파일 크기 합은 103,219,800 bytes이며 최고 디스크 사용량이 아니다. cgroup max_usage 관측은 162,578,432 bytes로, 컨테이너 생애 동안의 최대값이므로 빌드 한 건만의 최고 사용량으로 단정하지 않는다.
 
 후속 보완: 기본 probe에 빌드 보조 모듈 로딩 검사를 추가하고, 결과 생성 전 Function 실패가 Companion에서 WAITING으로 남는 경우를 호출 로그와 연결해 구분해야 한다. 새 wheel의 VM 배포·실제 에이전트 검증·OKE 배포는 별도 단계로 남아 있다.
+
+## Functions 산출물을 Companion으로 VM에 배포한 결과
+
+2026-11-08 위 Functions 실행의 두 wheel로 0.6.0 VM 배포를 완료했다. 앱을 다시 빌드하지 않았다. 기존 검증된 0.5.0 릴리스의 공개 의존성 잠금 목록이 신규 소스와 정확히 같음을 확인하여 의존성 wheel만 재사용하고, 앱·foundation wheel을 Functions 산출물로 교체했다. 생성한 오프라인 ZIP은 153,372,637 bytes이며 SHA-256은 3f529afea462fd4821ef7828f7c80a51c4884ec3687bf2d911ebee800905b122다. manifest SHA-256은 dcd730141a6613b0c233e5eb5f9d72fb2d109450cd82c7bf7a50565eb9bf7f0a다.
+
+대상 VM의 별도 폴더에서 네트워크 다운로드 없이 설치한 뒤 pip check와 service_desk.app·python_foundation·oracleagentmemory import, 앱·foundation 버전을 검사했다. 통과 전에는 릴리스 검증을 pending으로 유지했다. 해당 검증 폴더는 앱 실행 경로가 아니며 기존 서비스·업무 데이터·비밀 설정은 변경하지 않았다. 검증 파일과 기존 릴리스가 디스크를 사용하므로 후속 이미지 제작 공간과 별도로 산정해야 한다.
+
+기존 prepare_release·register_release·provision_pipeline 도구를 사용했다. 새 별칭 memory-0.6.0-3f529afea462를 추가하고 이전 복구 별칭을 보존했다. Terraform function-060 workspace는 새 배포 경로를 만들었고, 공유 IAM은 기존 파이프라인 5개의 권한을 보존하면서 신규 파이프라인만 추가했다. 첫 IAM 준비는 오래된 owner-vars 때문에 중단됐다. 실제 정책과 Terraform 상태의 일치를 확인해 최신 입력을 만들고 --iam-only로 재개했으며 기존 자원을 다시 만들지 않았다. 적용 후 정책 소유 입력도 갱신했다.
+
+Companion의 일반 배포 실행 화면에서 대상 VM과 새 릴리스 파이프라인을 확인하고 실행했다. 실행 이름 companion-0bbe652f-db8d-457f-babe-347587ad720c는 OCI에서 SUCCEEDED였다. 실제 systemd 실행 경로는 새 릴리스의 venv이고 health는 UP, 버전은 0.6.0이었다. 같은 파이프라인의 후속 검사에서 active-release, model-memory-runtime, langfuse-input-output, memory-body-excluded가 PASS였고 관측 5개를 확인했다. 이는 합성 데모 시나리오의 검증이며 부하·모든 업무 경로·복구 시험 완료를 뜻하지 않는다.
+
+자동화 경계: 소스 빌드 실행과 VM 배포 실행은 각각 Companion에서 수행했다. Functions wheel을 오프라인 릴리스 ZIP으로 조립하는 단계와 신규 릴리스 등록·파이프라인 준비는 Launchpad 측 도구 및 관리자 작업이다. 현재 Companion에는 Functions 결과에서 이 배포를 자동 연결하는 기능이 없으며, 관리형 빌드의 handoff 검증을 사용한 것으로 표시하지 않는다. 다음 개선은 이 패키지 조립의 재사용 CLI와 Functions 산출물 기반 범용 배포 연결이다. 앱 고유 release.json 형식을 Companion에 넣지 않는다.
+
+OKE는 아직 미배포다. 서울의 같은 구획에 다른 용도의 Enhanced cluster가 있음을 읽기 조회했지만 사용 대상으로 확정하거나 수정하지 않았다. 후속 작업은 OKE 실행 이미지·격리된 배포 대상·스토리지·workload identity·비공개 메모리/관측 연결 및 Companion의 범용 OKE 실행 지원이다.
