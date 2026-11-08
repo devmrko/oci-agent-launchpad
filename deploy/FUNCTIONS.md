@@ -55,3 +55,13 @@ Companion 커밋 72f3349는 `/usr/bin/env fdk`로 시작 경로를 수정했다.
 호출 로그는 Application 단위 Functions/invoke 서비스 로그로 활성화한다. OCI SDK의 추상 Source에 service/resource/category를 넣으면 TypeError가 발생하므로 OciService 모델을 사용한다. Logging 활성화와 서비스 로그 ACTIVE를 확인한 후 실패 원인을 수집했다. 컨테이너 이미지 검사 성공과 실제 클라우드 시작 성공을 별도 완료 조건으로 유지한다.
 
 두 번째 빌드에서는 기본 entrypoint로 FDK 서버가 시작됐으나 smoke 검사 자체가 `/`를 호출해 404로 실패했다. 사용한 fdk 0.1.128의 공식 패키지 소스에서 POST `/call` 등록을 확인하고 검사 경로를 수정했다. OCI 커밋 68efecad39d70a32b79dd3a5883d78c2f3165193을 지정한 세 번째 실행 python-function-image-060-3을 Companion에서 접수했다. 두 번째 실행은 전달 단계에 진입하지 않았으므로 미게시 태그 060-2를 그대로 사용한다. 재빌드 성공과 실제 Function probe는 별도로 확인한다.
+
+## 수정 후 실제 Function 검증
+
+2026-11-08 세 번째 이미지 실행은 build-and-test와 publish-python-function-image 모두 SUCCEEDED였다. 기본 entrypoint를 시작하고 POST /call로 probe를 보내는 검사도 통과했다. OCIR의 060-2 digest는 `sha256:3363eb6a5b4a56cc42638eb65ceb3fa6bd630460b3881c141894718b16f93349`다. 기존 Python Function에 이 digest를 적용하고 ACTIVE 상태에서 실제 OCI invoke probe 성공을 확인했다.
+
+실제 Function 응답은 python-v1, x86_64, Python 경로 /opt/cpython-3.12/bin/python3였다. /tmp 전체·여유 공간은 805,306,368 bytes(768MiB), 메모리 제한은 3,221,225,472 bytes(3GiB), probe 시 관측 메모리 사용량은 39,038,976 bytes였다. 이는 소스 빌드의 최대 메모리·디스크 사용량이 아니다. 호출 로그의 요청 처리 시간은 87.593초였으며 콜드 스타트와 핸들러 처리 시간을 따로 측정한 값은 아니다.
+
+배포 자동화 레슨런: update_function은 응답 본문이 없을 수 있다. 반환 data에서 Function ID를 읽으려다 실패했지만 이미지 갱신 자체는 성공했다. 재갱신 전에 get_function으로 적용 digest를 확인하고, 스크립트도 갱신 후 리소스를 다시 읽도록 수정했다. 쓰기 후 로컬 오류를 곧바로 원격 작업 실패로 취급하지 않는다.
+
+이 시점의 남은 검증은 Companion의 Python 소스 빌드 실행, 결과 저장 IAM, 실제 테스트 보고서, foundation·앱 wheel 크기와 SHA-256 대조다. 브라우저 확장 프로그램 화면이 Companion 조작을 차단하여 아직 실행하지 않았다. Function probe 성공을 소스 빌드·VM 배포·OKE 배포 완료로 표시하지 않는다.
