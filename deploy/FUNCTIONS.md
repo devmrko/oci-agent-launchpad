@@ -45,3 +45,11 @@ Linux ARM/Python 3.12용 공개 의존성 95개 wheel 다운로드를 완료했�
 IAM 레슨런: devops-artifacts라는 잘못된 리소스 이름으로 정책을 만들면 API가 400 No permissions found로 거부했다. 이를 권한 부족으로 단정해 더 넓은 권한을 부여하지 않았다. [공식 DevOps 정책 문서](https://docs.oracle.com/en-us/iaas/Content/devops/using/devops_iampolicies.htm)를 확인하고 DEVOPS_DEPLOY_ARTIFACT_READ를 명시한 정책으로 생성에 성공했다. 이미지 게시 권한은 해당 build pipeline ID와 target.repo.name으로 제한했다. 정책 생성 성공과 실제 이미지 전달 성공은 별도로 확인해야 한다.
 
 SSH 게시 시에는 기존에 공식 fingerprint와 대조한 scm_known_hosts와 OCI에 등록된 사용자 SSH 키 설정을 사용한다. 일반 git push가 Host key verification failed로 실패했을 때 StrictHostKeyChecking을 끄지 않고 기존 검증 설정을 적용했다.
+
+## 실제 Function 초기화에서 확인한 오류
+
+첫 이미지 060-1은 제작·의존성 검사·import 검사·Registry 전달을 통과했고 digest sha256:364d76d9ff0fe2a673afc9590daa234b5b8e7026a23bbc36b851c1555f2e9fd4로 Function을 생성했다. 하지만 실제 probe는 502 FunctionInvokeContainerInitFail이었다. OCI 호출 로그에서 `[FATAL tini] exec /usr/local/bin/fdk failed: No such file or directory`를 확인했다. import 검사에서는 entrypoint를 python3로 덮어썼으므로 이 오류를 검출하지 못했다.
+
+Companion 커밋 72f3349는 `/usr/bin/env fdk`로 시작 경로를 수정했다. OCI 소스 커밋 e61bbe3ffd53041753ef06640d62747f7fa5e082의 새 이미지 060-2 빌드는 실제 기본 entrypoint를 띄운 뒤 FN_FORMAT=http-stream, FN_LISTENER=unix:/tmp/fdk-smoke.sock로 probe HTTP 요청까지 보내도록 강화했다. 이 기록 시점에는 재빌드 중이며 Function에서의 수정 검증과 Launchpad 소스 빌드는 아직 완료하지 않았다.
+
+호출 로그는 Application 단위 Functions/invoke 서비스 로그로 활성화한다. OCI SDK의 추상 Source에 service/resource/category를 넣으면 TypeError가 발생하므로 OciService 모델을 사용한다. Logging 활성화와 서비스 로그 ACTIVE를 확인한 후 실패 원인을 수집했다. 컨테이너 이미지 검사 성공과 실제 클라우드 시작 성공을 별도 완료 조건으로 유지한다.
