@@ -1,0 +1,20 @@
+region              = "ap-seoul-1"
+compartment_id      = "REPLACE_WITH_COMPARTMENT_OCID"
+name                = "launchpad-oke"
+vcn_cidr            = "10.80.0.0/16"
+kubernetes_version  = "REPLACE_WITH_SUPPORTED_VERSION"
+node_image_id       = "REPLACE_WITH_MATCHING_AMD64_OKE_IMAGE_OCID"
+availability_domain = "REPLACE_WITH_AVAILABILITY_DOMAIN"
+node_shape          = "VM.Standard.E5.Flex"
+node_ocpus          = 2
+node_memory_gb      = 16
+node_count          = 1
+boot_volume_gb      = 100
+node_capacity = {
+  os_gib = 20
+  images_gib = 8
+  image_update_gib = 8
+  logs_gib = 8
+  ephemeral_gib = 8
+  reserve_gib = 16
+}

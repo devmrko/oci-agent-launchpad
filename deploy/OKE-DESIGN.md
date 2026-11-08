@@ -67,3 +67,9 @@ ADB 접근 ACL에는 실제 OKE 송신 경로를 반영해야 한다. Pod 주소
 인증 선택, 실패 시 우회 금지, 모델·임베딩의 입력 연결을 테스트한다. 선택적 메모리 패키지가 없는 로컬에서는 해당 import만 테스트 대역으로 대체하고 인증 팩터리 진입에서 종료한다. 실제 OKE 토큰 교환이나 OCI 권한 성공을 증명하는 테스트는 아니다. 클러스터·컨테이너 배포·Companion OKE 실행 지원은 아직 완료되지 않았다. Kubernetes 명세 생성기는 구현했으며 입력 차단과 단일 Pod·비밀 참조 계약을 로컬에서 검증했다. 사용 방법과 남은 적용 조건은 [OKE 명세 준비](OKE-MANIFESTS.md)를 참조한다.
 
 프로비저닝 용량은 [설치·작업 공간 산정](CAPACITY.md)을 먼저 적용한다. 노드 이미지 저장 공간, Pod 임시 저장 공간, PVC 데이터 용량을 분리하며 여유 공간만 보고 기존 관측 서버에 빌드를 공존시키지 않는다.
+
+## 전용 OKE 인프라 구현 계약
+
+첫 클러스터는 기존 `document_search`와 분리하고 전용 VCN, Enhanced cluster, AMD64 관리형 노드 풀을 만든다. Kubernetes API와 노드는 모두 비공개 서브넷에 둔다. OCI 서비스에는 Service Gateway, 외부 이미지·업데이트에는 NAT Gateway를 사용한다. API 6443/12250 접근은 전용 VCN 내부로 제한하고 노드 간 트래픽과 API→kubelet 통신만 내부에서 허용한다. DevOps private network channel과 운영자의 비공개 접근 경로는 별도 연결해야 하며, 이 단계에서 API 공개 주소나 외부 앱 LoadBalancer를 만들지 않는다.
+
+Terraform 입력은 리전·구획·VCN CIDR·버전·지원 노드 이미지·shape·가용 도메인·노드 수·노드 디스크 예산이다. 메모리 설정과 비밀값은 넣지 않는다. 이미지 교체/운영체제/로그/임시 작업/여유를 합한 예산보다 부트 볼륨이 작으면 계획을 차단한다. 첫 1노드·1Pod는 기능 검증용이며 HA를 의미하지 않는다. ADB 송신 ACL, Langfuse 피어링, workload IAM, Vault 주입, PVC와 배포는 후속 연결이다.
