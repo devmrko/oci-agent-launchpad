@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "version": "0.1.0-alpha.1",
+  "delivery_mode": "engineer-assisted",
+  "release_status": "draft",
+  "default_example": "hello-agent",
+  "components": {
+    "launchpad": {
+      "repository": "https://github.com/devmrko/oci-agent-launchpad",
+      "baseline_commit": "8c1716aeae84f78058ad5cacd10f6fc82b0bdadc",
+      "required_for_delivery": true,
+      "required_for_agent_execution": false
+    },
+    "companion": {
+      "repository": "https://github.com/devmrko/oci-companion",
+      "commit": "c1a5c98cc4bff6073afe38c182db5da553ec7585",
+      "required_for_delivery": true,
+      "required_for_agent_execution": false,
+      "clean_checkout_tests_passed": 156
+    },
+    "python_foundation": {
+      "repository": "https://github.com/devmrko/python-foundation",
+      "commit": "d207f52281552a551457733bebc0ee62036b36e3",
+      "package_version": "0.1.2",
+      "required_for_delivery": true,
+      "required_for_agent_execution": true,
+      "wheel_sha256": "e5d2ffb644699f76d831c71e6ec8626a734dd078da0956938e868ad1f1d0132e"
+    },
+    "hello_agent": {
+      "package_version": "0.1.0",
+      "source_commit": "7d4817c8a70b4eb6964ed31ffbf7120a0c5f2866",
+      "image_digest": "sha256:44f64c7dec630e56115d89fccbce63c56e09fdee4a1719d49a45e81005ab4582",
+      "wheel_sha256": "d1637b07b9b05cdd4f08f72bfe4a6caac982c83863db815b1afbfe5502cd43a7",
+      "architecture": "linux/amd64",
+      "registry_access": "operator-provided-private-image-or-rebuild"
+    },
+    "langfuse": {
+      "required_for_delivery": true,
+      "purpose": "trace acceptance for the default example",
+      "required_for_successful_tool_response": false,
+      "interface": "OTLP export + Observations API v2",
+      "packaging": "existing operator-provided installation; exact OSS deployment lock not included"
+    },
+    "oracle_agent_memory": {
+      "required_for_default_example": false,
+      "selection": "required only for agreed persistent-memory use cases"
+    }
+  },
+  "verified_reference_environment": {
+    "runtime_region": "ap-seoul-1",
+    "model_region": "us-ashburn-1",
+    "model": "google.gemini-2.5-flash-lite",
+    "fresh_customer_environment_verified": false
+  },
+  "evidence": [
+    "examples/hello-agent/verification/oke-2026-11-09.json",
+    "examples/hello-agent/verification/browser-2026-11-09.json",
+    "examples/hello-agent/verification/companion-job-2026-11-09.json"
+  ],
+  "open_release_gates": [
+    "independent fresh-environment rehearsal",
+    "cost and resource cleanup rehearsal",
+    "rollback rehearsal for default OKE path",
+    "pin and package OSS installation dependencies"
+  ],
+  "known_gaps": [
+    "Companion does not automatically collect Job result JSON",
+    "customer OIDC and per-customer credential isolation not completed",
+    "failed-model traces and telemetry retry not completed",
+    "interview-to-handover customer portal not implemented"
+  ]
+}
