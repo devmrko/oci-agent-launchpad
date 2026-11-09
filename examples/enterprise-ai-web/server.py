@@ -177,7 +177,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, estimate(value["nights"]))
             value = validate(value)
         except (ValueError, UnicodeError):
-            return self.send(400, {"error": "숙박 1~10박과 계산 도구 선택을 확인해 주세요."})
+            return self.send(400, {"error": "숙박 1~14박과 계산 도구 선택을 확인해 주세요."})
         if not self.server.gate.acquire(blocking=False):
             return self.send(429, {"error": "앞선 요청이 끝난 후 다시 시도해 주세요."})
         try:

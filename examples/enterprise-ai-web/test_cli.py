@@ -12,7 +12,7 @@ class CliTests(unittest.TestCase):
                               capture_output=True, text=True, timeout=5)
 
     def test_json_matches_shared_rule(self):
-        for nights in (1, 2, 10):
+        for nights in (1, 2, 10, 11, 14):
             with self.subTest(nights=nights):
                 result = self.invoke(str(nights))
                 self.assertEqual(result.returncode, 0, result.stderr)
@@ -20,7 +20,7 @@ class CliTests(unittest.TestCase):
                 self.assertEqual(json.loads(result.stdout), estimate(nights))
 
     def test_invalid_input_has_no_success_output(self):
-        for args in (("0",), ("11",), ("-1",), ("2.5",), ("true",), ("abc",), (), ("2", "3")):
+        for args in (("0",), ("15",), ("-1",), ("2.5",), ("true",), ("abc",), (), ("2", "3")):
             with self.subTest(args=args):
                 result = self.invoke(*args)
                 self.assertEqual(result.returncode, 2)

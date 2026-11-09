@@ -16,6 +16,10 @@
         {
           "path": "examples/enterprise-ai-web/test_server.py",
           "case": "EstimateTests.test_invalid_nights"
+        },
+        {
+          "path": "examples/enterprise-ai-web/test_server.py",
+          "case": "BoundaryTests.test_extended_nights_api_and_page"
         }
       ]
     },

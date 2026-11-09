@@ -9,13 +9,13 @@ from server import Server, assess, estimate
 
 class EstimateTests(unittest.TestCase):
     def test_rule_amounts(self):
-        for nights in (1, 2, 10):
+        for nights in (1, 2, 10, 11, 14):
             result = estimate(nights)
             self.assertEqual(result["amount"], nights * 100000)
             self.assertFalse(result["model_used"])
 
     def test_invalid_nights(self):
-        for value in (True, 0, 11, "2", 2.5, None):
+        for value in (True, 0, 15, -1, "2", 2.5, None):
             with self.assertRaises(ValueError):
                 estimate(value)
 
@@ -83,12 +83,30 @@ class BoundaryTests(unittest.TestCase):
         self.assertEqual(self.post({"nights": 2, "use_tool": False})[0], 409)
         self.assertEqual(self.calls, [])
 
+    def test_extended_nights_api_and_page(self):
+        for nights, amount in ((10, 1000000), (11, 1100000), (14, 1400000)):
+            status, body = self.post({"nights": nights}, path="/api/estimate")
+            self.assertEqual(status, 200)
+            self.assertEqual(json.loads(body)["amount"], amount)
+        self.assertEqual(self.post({"nights": 15}, path="/api/estimate")[0], 400)
+        self.assertEqual(self.calls, [])
+        self.assertEqual(self.server.remaining, 10)
+        connection = http.client.HTTPConnection("127.0.0.1", self.server.server_port)
+        connection.request("GET", "/")
+        response = connection.getresponse()
+        page = response.read().decode()
+        connection.close()
+        self.assertEqual(response.status, 200)
+        import re
+        options = re.findall(r'<option value="(\d+)"', page)
+        self.assertEqual(options, [str(n) for n in range(1, 15)])
+
     def test_estimate_access_and_fields(self):
         self.assertEqual(self.post({"nights": 2}, path="/api/estimate", origin="https://example.org")[0], 403)
         self.assertEqual(self.post({"nights": 2, "rate": 1}, path="/api/estimate")[0], 400)
 
     def test_invalid_inputs_never_reach_oci(self):
-        for nights in [True, 0, 11, "2", 2.5]:
+        for nights in [True, 0, 15, "2", 2.5]:
             self.assertEqual(self.post({"nights": nights, "use_tool": False})[0], 400)
         self.assertEqual(self.calls, [])
 

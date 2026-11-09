@@ -61,3 +61,5 @@ python3 -m unittest discover -s scripts -p 'test_requirement_handoff.py'
 ```
 
 2026년 11월 9일 테스트 7건과 합성 CLI의 초안 생성→검토 기록→상태 조회를 확인했습니다. 요구 수정·source 정정 시 재검토, 다른 프로젝트·위조 근거·중복 답변 거부, 미정 유지, 기존 출력 보호를 시험했습니다. 설계와 경계는 [구현 전 설계](design.md)에 있습니다.
+
+[14박 변경 예제](interview.14-nights.example.json)는 기존 10박 답변을 보존하고 수정 답변을 연결한 revision 2입니다. [실제 앱 변경 사례](../travel-allowance/change-14-nights.md)와 [전체 체험](../sdd-walkthrough/README.md)에서 사용합니다. 기존 revision 1 예제는 초안·검토 연습용으로 그대로 제공합니다.

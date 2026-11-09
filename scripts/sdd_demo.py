@@ -7,13 +7,13 @@ import shutil
 import sys
 
 from check_spec_links import check
-from requirement_handoff import draft, read, review, status, write_new
+from requirement_handoff import draft, read, review, snapshot, status, write_new
 from spec_evidence import execute, inspect as inspect_evidence
 from spec_impact import bind, inspect as inspect_impact
 
 
 BUNDLE = "specs/travel-allowance"
-SOURCE = "specs/interview-handoff/interview.example.json"
+SOURCE = "specs/interview-handoff/interview.14-nights.example.json"
 
 
 def run_demo(root, output):
@@ -31,7 +31,7 @@ def run_demo(root, output):
     draft_result = draft(source, handoff)
     review(handoff, "REQ-001", "synthetic-demo-only-not-a-human-approval")
     baseline = bind(workspace, "handoff", "REQ-001", BUNDLE, "REQ-001", source,
-                    "Synthetic demonstration: nights 1–10 times 100000 matches the existing calculation requirement.")
+                    "Synthetic demonstration: nights 1–14 times 100000 matches the existing calculation requirement.")
     write_new(workspace / "binding.json", baseline)
     evidence = execute(workspace, Path(BUNDLE), workspace / "test-evidence.json")
     initial = {"impact": inspect_impact(workspace, baseline, source),
@@ -41,7 +41,7 @@ def run_demo(root, output):
     updated = copy.deepcopy(read(source))
     updated["revision"] += 1
     updated["answers"].append({"id": "a-demo-update", "questionId": "q-1",
-                               "text": "숙박 일수의 상한을 14박으로 변경합니다.", "status": "answered", "supersedes": "a-1"})
+                               "text": "숙박 일수의 상한을 21박으로 변경합니다.", "status": "answered", "supersedes": snapshot(updated)["q-1"]["id"]})
     changed_source = workspace / "source-updated.json"
     write_new(changed_source, updated)
     source_change = {"impact": inspect_impact(workspace, baseline, changed_source),
