@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "spec": "specs/hello-agent/spec.md",
+  "requirements": [
+    "REQ-001",
+    "REQ-002",
+    "REQ-003",
+    "REQ-004"
+  ],
+  "files": [
+    "examples/hello-agent/agent.py",
+    "examples/hello-agent/test_agent.py",
+    "specs/hello-agent/design.md",
+    "specs/hello-agent/tasks.md",
+    "specs/hello-agent/traceability.json"
+  ]
+}

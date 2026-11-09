@@ -24,6 +24,8 @@ python3 -S scripts/spec_evidence.py run specs/container-health \
 
 이 연결 방식은 fixture가 없는 단순 함수에 한정됩니다. pytest fixture·플러그인·매개변수화나 다른 언어의 테스트를 자동 지원하지 않습니다. 테스트 프레임워크를 바꿀 필요 없이 연결할 수 있는 범위를 실제 코드에서 먼저 확인해야 합니다.
 
+프로젝트의 테스트 명령 자체를 그대로 실행하려면 [기존 명령 실행 근거](../command-evidence/README.md)를 사용하세요. 아래의 요구별 unittest 판정과 달리 명령 종료 결과를 기록하며, pytest fixture 등을 실행기가 직접 해석하지 않습니다.
+
 ## 변경 요청을 남기고 실패 확인
 
 ```sh
