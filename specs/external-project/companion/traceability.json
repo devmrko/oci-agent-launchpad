@@ -1,0 +1,34 @@
+{
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "implementation": [
+        "examples/container-demo/app.py",
+        "examples/container-demo/test_app.py"
+      ],
+      "tests": [
+        {
+          "path": "examples/container-demo/test_sdd.py",
+          "case": "ContractTests.test_existing_service"
+        },
+        {
+          "path": "examples/container-demo/test_sdd.py",
+          "case": "ContractTests.test_existing_health"
+        }
+      ]
+    },
+    {
+      "id": "REQ-002",
+      "implementation": [
+        "examples/container-demo/app.py",
+        "examples/container-demo/test_app.py"
+      ],
+      "tests": [
+        {
+          "path": "examples/container-demo/test_sdd.py",
+          "case": "ContractTests.test_root"
+        }
+      ]
+    }
+  ]
+}

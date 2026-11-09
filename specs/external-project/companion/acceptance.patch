@@ -1,0 +1,41 @@
+--- a/examples/container-demo/test_sdd.py
++++ b/examples/container-demo/test_sdd.py
+@@ -41,3 +41,13 @@
+         status, body = self.request('/')
+         self.assertEqual(status, 200)
+         self.assertEqual(body['status'], 'ok')
++
++    def test_healthz(self):
++        status, body = self.request('/healthz')
++        self.assertEqual(status, 200)
++        self.assertEqual(body['status'], 'ok')
++
++    def test_unknown_path(self):
++        status, body = self.request('/missing')
++        self.assertEqual(status, 404)
++        self.assertEqual(body, {'error': 'not_found'})
+--- a/specs/container-health/spec.md
++++ b/specs/container-health/spec.md
+@@ -10,3 +10,5 @@
+ ## REQ-002 HTTP 상태 확인
+ 
+ GET /는 JSON 상태 응답을 200으로 반환합니다. 실제 로컬 HTTP 요청으로 검사합니다.
++
++추가 요구: GET /healthz도 같은 상태를 200으로 반환하고, 그 외 경로는 {"error":"not_found"}를 404로 반환합니다. 경로는 쿼리 문자열을 포함한 정확한 일치로 판별합니다.
+--- a/specs/container-health/traceability.json
++++ b/specs/container-health/traceability.json
+@@ -27,6 +27,14 @@
+         {
+           "path": "examples/container-demo/test_sdd.py",
+           "case": "ContractTests.test_root"
++        },
++        {
++          "path": "examples/container-demo/test_sdd.py",
++          "case": "ContractTests.test_healthz"
++        },
++        {
++          "path": "examples/container-demo/test_sdd.py",
++          "case": "ContractTests.test_unknown_path"
+         }
+       ]
+     }
