@@ -18,6 +18,8 @@ SDD는 요구 명세를 기준으로 설계·구현·테스트와 변경을 이�
 
 [변경 영향 검사](specs/change-impact/README.md)는 검토한 요구를 구현 명세에 연결하고, 변경된 요구·코드·테스트와 다시 살펴볼 시험 목록을 보여줍니다. 연결 파일은 일반 JSON이며 실제 테스트·배포 실행과는 구분합니다.
 
+[요구별 테스트 결과](specs/test-evidence/README.md)는 연결된 테스트를 실제 실행해 요구 ID별 결과와 파일 해시를 JSON으로 남깁니다. 코드가 바뀌면 재실행이 필요하다고 표시합니다. OCI 계정 없이 출장비 예제로 확인할 수 있습니다.
+
 ```sh
 # Python 3.12 이상. 패키지 설치·OCI 계정 없이 실행합니다.
 python3 examples/enterprise-ai-web/server.py --offline
