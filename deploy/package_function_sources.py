@@ -11,18 +11,21 @@ from pathlib import Path
 from package_sources import export
 
 
-def package(foundation, foundation_revision, launchpad, launchpad_revision, output):
+def package(foundation, foundation_revision, launchpad, launchpad_revision, output, example="service-desk"):
+    if example not in {'service-desk', 'hello-agent'}:
+        raise ValueError('Unsupported example')
+    example_path = 'examples/' + example
     if output.exists():
         raise ValueError('Output already exists')
     fsha, library = export(foundation, foundation_revision, ['src', 'pyproject.toml', 'README.md'], 'project/dependencies/foundation/')
-    lsha, source = export(launchpad, launchpad_revision, ['examples/service-desk', 'deploy/function-build-tools.lock'], '')
+    lsha, source = export(launchpad, launchpad_revision, [example_path, 'deploy/function-build-tools.lock'], '')
     files = {}
     tools = None
     for name, data, mode in source:
         if name == 'deploy/function-build-tools.lock':
             tools = data.decode()
-        elif name.startswith('examples/service-desk/'):
-            files['project/' + name.removeprefix('examples/service-desk/')] = (data, mode)
+        elif name.startswith(example_path + '/'):
+            files['project/' + name.removeprefix(example_path + '/')] = (data, mode)
     for name, data, mode in library:
         if name in files:
             raise ValueError('Duplicate bundled path')
@@ -77,5 +80,6 @@ if __name__ == '__main__':
     parser.add_argument('--launchpad', type=Path, default=Path('.'))
     parser.add_argument('--launchpad-revision', required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--example', choices=['service-desk', 'hello-agent'], default='service-desk')
     args = parser.parse_args()
-    print(json.dumps(package(args.foundation, args.foundation_revision, args.launchpad, args.launchpad_revision, args.output), indent=2))
+    print(json.dumps(package(args.foundation, args.foundation_revision, args.launchpad, args.launchpad_revision, args.output, args.example), indent=2))
