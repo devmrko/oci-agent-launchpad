@@ -83,7 +83,7 @@ python3 scripts/spec_evidence.py run specs/cost --root /path/to/project --output
 python3 scripts/spec_evidence.py check .run/external-evidence.json --root /path/to/project
 ```
 
-출력 경로는 명령을 실행하는 현재 폴더 기준입니다. `/path/to/project`와 `specs/cost`는 실제 경로로 바꾸세요. `--root`를 생략하면 기존처럼 Launchpad 저장소를 사용합니다. 프로젝트에는 현재 도구가 읽는 `spec.md`, `design.md`, `tasks.md`, `traceability.json`이 필요하며 테스트 실행기는 Python unittest를 지원합니다. 임의의 언어·프레임워크를 자동 인식하는 기능은 아닙니다.
+출력 경로는 명령을 실행하는 현재 폴더 기준입니다. `/path/to/project`와 `specs/cost`는 실제 경로로 바꾸세요. `--root`를 생략하면 기존처럼 Launchpad 저장소를 사용합니다. 프로젝트에는 현재 도구가 읽는 `spec.md`, `design.md`, `tasks.md`, `traceability.json`이 필요하며 테스트 항목은 기존 Python unittest의 `case` 또는 [명령 실행 계획의 `command_plan`](../command-evidence/README.md#unittest-없이-작업-지시서부터-시작하기)을 지정할 수 있습니다. 언어·프레임워크나 실행 명령을 자동 인식하지 않습니다.
 
 ## 검증 범위
 

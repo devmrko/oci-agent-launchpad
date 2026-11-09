@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "spec": "specs/cost/spec.md",
+  "requirements": [
+    "REQ-001"
+  ],
+  "files": [
+    "cost.cjs",
+    "cost.test.cjs",
+    "package.json",
+    "specs/cost/design.md",
+    "specs/cost/tasks.md",
+    "specs/cost/traceability.json"
+  ]
+}

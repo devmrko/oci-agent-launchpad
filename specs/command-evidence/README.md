@@ -85,4 +85,55 @@ python3 -S scripts/developer_handoff.py report .run/hello-task/baseline.json \
 - 첨부한 명령 중 실패·오래됨·실행 중 변경이 있거나, 요청 요구 참조·현재 명세 연결 파일의 해시 범위가 빠지면 `CHECKS_REQUIRED`입니다.
 - 다른 명세의 결과는 입력 오류로 거부합니다. 모든 합격 조건과 승인은 사람 검토 대기로 남습니다.
 
-현재 `prepare`는 여전히 unittest 연결 명세를 요구합니다. 따라서 명령 결과 첨부가 임의 언어의 작업 지시서 생성까지 지원한다는 의미는 아닙니다. 명령 단독 실행·근거 확인은 이 제한 없이 사용할 수 있습니다.
+`prepare`는 아래의 `command_plan` 연결도 지원합니다. 테스트 파일의 언어를 해석하지 않고 파일·명세·계획 연결을 검사합니다. 실제 테스트 실행 명령은 사용자가 별도로 지정합니다.
+
+## unittest 없이 작업 지시서부터 시작하기
+
+`traceability.json`의 테스트 항목에서 `case` 대신 `command_plan`을 지정합니다. 둘을 함께 쓰면 오류입니다.
+
+```json
+{
+  "requirements": [{
+    "id": "REQ-001",
+    "implementation": ["cost.cjs"],
+    "tests": [{"path": "cost.test.cjs", "command_plan": "checks.json"}]
+  }]
+}
+```
+
+`checks.json`은 앞서 설명한 실행 계획입니다. 같은 명세와 요구 ID를 참조하고 해당 구현·테스트 파일을 포함해야 합니다. 계획에 열거한 의존·설정 파일도 작업 기준 해시와 복사 대상에 포함됩니다. 검토 보고서에 사용할 때는 명세·설계·작업·연결 파일 전체도 계획에 포함하세요. [Node.js 예제 계획](node-example/checks.json)이 실제 형식입니다.
+
+작업 지시서·변경 영향 결과에서 `command:checks.json`은 실행 계획의 참조를 뜻합니다. 기존 JSON 결과의 `case` 표시 필드에도 이 문자열이 사용되며 unittest 메서드가 아닙니다. 계획 참조가 제거되거나 변경되면 기존 테스트 연결 변경으로 표시합니다. `spec_evidence.py run`은 명령 항목을 자동 실행하거나 건너뛰지 않고 거부하므로 `command_evidence.py run`으로 실행하세요.
+
+### Node.js에서 전체 흐름 재현
+
+Node.js와 npm이 설치된 macOS·Linux에서 Launchpad 루트 기준으로 실행합니다. 예제는 추가 패키지를 설치하지 않습니다. 작은 합성 검증 프로젝트이며 초기 구현에는 의도적으로 음수 검사가 빠져 있습니다.
+
+```sh
+node_project="$(mktemp -d /tmp/launchpad-node.XXXXXX)"
+cp -R specs/command-evidence/node-example/. "$node_project/"
+mkdir -p .run
+python3 -S scripts/developer_handoff.py prepare specs/cost \
+  --root "$node_project" --requirement REQ-001 \
+  --request '음수 비용을 거부하도록 구현한다.' \
+  --acceptance '음수이면 RangeError이고 양수와 0의 합산은 유지한다.' \
+  --output .run/node-task
+python3 -S scripts/command_evidence.py run checks.json --root "$node_project" \
+  --output .run/node-red.json -- npm test
+```
+
+마지막 명령의 **종료 코드 2, COMMAND_FAILED**는 예상된 실패입니다. 결과를 확인한 다음 구현 패치를 적용합니다.
+
+```sh
+git -C "$node_project" apply --check "$node_project/fix.patch"
+git -C "$node_project" apply "$node_project/fix.patch"
+python3 -S scripts/command_evidence.py run checks.json --root "$node_project" \
+  --output .run/node-green.json -- npm test
+python3 -S scripts/developer_handoff.py report .run/node-task/baseline.json \
+  --root "$node_project" --command-evidence .run/node-green.json \
+  --output .run/node-review
+```
+
+`COMMAND_SUCCEEDED`와 `COMMANDS_CURRENT_REVIEW_PENDING`이 나오고 보고서에 `cost.cjs` 변경이 표시됩니다. 요구 충족·고객 승인은 사람 검토 대기로 남습니다. 재실행에는 새 출력 이름을 사용하세요.
+
+2026-11-10 macOS / Node 26.12.0 / npm 11.20.0에서 이 실패→수정→통과→보고서 흐름을 실제로 확인했습니다. 자동 Python 검사는 명령 계획 기반 작업 전달·잘못된 연결·계획 참조 변경·unittest 실행기의 명령 항목 거부를 검사합니다. Node 실제 실행은 이 로컬 확인 범위이며 현재 CI의 필수 환경으로 추가하지 않았습니다.

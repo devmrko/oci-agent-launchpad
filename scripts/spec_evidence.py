@@ -22,6 +22,8 @@ def execute(root, bundle, output, timeout=30):
         raise ValueError("Timeout must be positive")
     before = check(root, bundle)
     manifest = read(root / bundle / "traceability.json")
+    if any("command_plan" in t for r in manifest["requirements"] for t in r["tests"]):
+        raise ValueError("Command-linked tests require command_evidence.py run with an explicit command")
     cases = sorted({(t["path"], t["case"]) for r in manifest["requirements"] for t in r["tests"]})
     results = []
     worker = Path(__file__).with_name("spec_test_worker.py").resolve()

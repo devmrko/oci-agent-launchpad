@@ -1,0 +1,16 @@
+{
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "implementation": [
+        "cost.cjs"
+      ],
+      "tests": [
+        {
+          "path": "cost.test.cjs",
+          "command_plan": "checks.json"
+        }
+      ]
+    }
+  ]
+}

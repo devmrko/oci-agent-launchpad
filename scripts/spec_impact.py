@@ -5,7 +5,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
-from check_spec_links import check
+from check_spec_links import check, test_reference
 from requirement_handoff import digest, fingerprint, load_bundle, read, status, text, write_new
 
 
@@ -100,9 +100,9 @@ def inspect(root, baseline, latest):
         paths = set(entry["implementation"]) | {t["path"] for t in entry["tests"]}
         if paths.intersection(changed):
             affected.add(entry["id"])
-    tests = {(t["path"], t["case"]) for r in entries if r["id"] in affected for t in r["tests"]}
+    tests = {(t["path"], test_reference(t)) for r in entries if r["id"] in affected for t in r["tests"]}
     if reasons:
-        tests.update((t["path"], t["case"]) for t in baseline["target"]["mapping"]["tests"])
+        tests.update((t["path"], test_reference(t)) for t in baseline["target"]["mapping"]["tests"])
     return {"status": "REVIEW_REQUIRED" if reasons else "UNCHANGED", "reasons": reasons,
             "source_requirement": baseline["source_requirement"],
             "target_requirement": baseline["target_requirement"],

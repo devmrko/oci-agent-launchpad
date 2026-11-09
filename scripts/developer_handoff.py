@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import re
 
-from check_spec_links import check
+from check_spec_links import check, test_reference
 from requirement_handoff import read, write_new
 from spec_impact import local
 from spec_init import line
@@ -31,7 +31,7 @@ def prepare(root, bundle, requirements, request, acceptance, output):
     sections = re.split(r"(?=^## )", spec, flags=re.M)
     selected_text = [s.strip() for s in sections if any(re.match(r"## " + re.escape(r) + r"\b", s) for r in requirements)]
     source_files = sorted({p for r in selected for p in r["implementation"]})
-    tests = sorted({(t["path"], t["case"]) for r in selected for t in r["tests"]})
+    tests = sorted({(t["path"], test_reference(t)) for r in selected for t in r["tests"]})
     task = f"# 변경 작업 지시서\n\n{request}\n\n상태: 제안된 작업. 고객 승인·구현·검증 완료를 뜻하지 않습니다.\n"
     task += "\n## 현재 요구\n\n" + "\n\n".join(s.replace("## ", "### ", 1) for s in selected_text) + "\n"
     task += "\n## 변경 후 합격 조건 (작성자 제안)\n\n" + "".join(f"- {s}\n" for s in acceptance)
@@ -85,8 +85,8 @@ def report(root, baseline, evidence, output, command_evidence=None):
         current = check(root, baseline["bundle"])
         missing = sorted(set(selected) - set(current["requirements"]))
         records = read(directory / "traceability.json")["requirements"]
-        current_tests = {(r["id"], t["path"], t["case"]) for r in records for t in r["tests"]}
-        old_tests = {(r["id"], t["path"], t["case"]) for r in baseline["selected_mapping"] for t in r["tests"]}
+        current_tests = {(r["id"], t["path"], test_reference(t)) for r in records for t in r["tests"]}
+        old_tests = {(r["id"], t["path"], test_reference(t)) for r in baseline["selected_mapping"] for t in r["tests"]}
         removed = [{"requirement": rid, "path": path, "case": case} for rid, path, case in sorted(old_tests - current_tests)]
         if missing:
             reasons.append("selected_requirements_missing")

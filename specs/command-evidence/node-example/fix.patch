@@ -1,0 +1,9 @@
+--- a/cost.cjs
++++ b/cost.cjs
+@@ -1,2 +1,4 @@
+-// Intentionally incomplete: use fix.patch after observing the failing test.
+-exports.total = (a, b) => a + b;
++exports.total = (a, b) => {
++  if (a < 0 || b < 0) throw new RangeError('negative cost');
++  return a + b;
++};
