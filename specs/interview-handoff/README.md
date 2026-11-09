@@ -54,6 +54,8 @@ REQ-001은 `REVIEW_RECORDED`, REQ-002는 `DRAFT`로 표시됩니다. 검토 기�
 
 검토한 요구를 [출장비 명세](../travel-allowance/spec.md)처럼 성공 조건이 있는 문서로 정리합니다. 요구별로 확인한 근거 ID를 함께 남기고, 설계·작업·테스트 연결은 [SDD 따라하기](../travel-allowance/README.md)의 방식으로 이어갑니다. 기존 명세에 반영할 때는 내용과 ID를 사람이 대조하며, 이 도구가 코드나 배포 설정을 자동 변경하지 않습니다.
 
+검토한 요구와 구현 명세의 요구를 연결해 변경 영향을 확인하려면 [요구 연결과 변경 영향 검사](../change-impact/README.md)를 사용합니다. 연결 후 요구나 코드·테스트가 바뀌면 재검토할 파일과 시험 목록을 볼 수 있습니다.
+
 ```sh
 python3 -m unittest discover -s scripts -p 'test_requirement_handoff.py'
 ```

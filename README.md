@@ -16,6 +16,8 @@ SDD는 요구 명세를 기준으로 설계·구현·테스트와 변경을 이�
 
 [인터뷰 근거 연결 도구](specs/interview-handoff/README.md)는 JSON 답변을 요구 초안으로 옮기고 원문·검토 기록을 연결합니다. 미정 답변은 유지하며, 요구나 인터뷰가 바뀌면 재검토로 표시합니다. 초안을 자동으로 고객 확정 요구로 승격하거나 코드를 변경하지 않습니다.
 
+[변경 영향 검사](specs/change-impact/README.md)는 검토한 요구를 구현 명세에 연결하고, 변경된 요구·코드·테스트와 다시 살펴볼 시험 목록을 보여줍니다. 연결 파일은 일반 JSON이며 실제 테스트·배포 실행과는 구분합니다.
+
 ```sh
 # Python 3.12 이상. 패키지 설치·OCI 계정 없이 실행합니다.
 python3 examples/enterprise-ai-web/server.py --offline
