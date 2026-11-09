@@ -90,3 +90,5 @@ Companion 등록 앱에서 Hello Agent를 선택하면 앱 health와 OKE Deploym
 Companion 화면은 배포 SUCCEEDED와 업무 검증 미확인을 구분합니다. 이번 Job 종료 상태와 JSON 결과는 운영자 도구로 읽어 기록했으며 Companion 자동 결과 수집은 미구현입니다. 검증 후 파이프라인은 원래 앱 명세로 복원했습니다. 완료된 Job은 TTL로 정리됩니다. 새로운 검사에는 고유한 Job 이름을 준비해야 합니다.
 
 검증: Companion 전체 159개 테스트 통과, probe 출력 방식·실패 종료·Langfuse 조회 계약 3개 테스트 통과. Companion과 Launchpad는 각각 독립 저장소에서 변경하고 특정 앱 코드나 관측 DB를 Companion에 포함하지 않습니다.
+
+공유 브랜치의 새 변경을 별도 체크아웃에서 통합한 Companion 커밋은 `c1a5c98`입니다. 그 깨끗한 체크아웃의 전체 테스트 156개와 패키징이 통과했습니다. 앞선 159개는 별도의 미커밋 외부 도구 작업을 포함한 개발 작업 공간 결과입니다. 둘을 같은 릴리스 결과로 혼동하지 않습니다. Launchpad와 Companion의 기존 미커밋 파일은 그대로 보존했습니다.

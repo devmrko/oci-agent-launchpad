@@ -17,7 +17,7 @@
 | 관측 | 같은 웹 실행의 모델·도구·응답 입력/출력 Langfuse 조회 | 실패 호출 추적·재전송·유실 방지는 미완료 |
 | 관리 독립성 | Companion 등록 정보로 health·버전·Pod·노드 조회 | 관리 PC 터널 의존; 상시 수집·알림과 다름 |
 | 검증 Job | Companion 화면에서 시작한 Job Complete와 모든 검사 PASS | 결과 수집은 운영자가 수행; Companion 자동 수집은 미구현 |
-| Companion 회귀 | Job 지원 변경 포함 159개 테스트 통과 | 테스트 수가 보안·운영 성숙도를 보장하지 않음 |
+| Companion 회귀 | 개발 작업 공간 159개, 최신 원격 변경과 통합한 깨끗한 체크아웃 156개 테스트 통과 | 개발 작업 공간의 별도 미커밋 기능과 릴리스 대상을 구분. 테스트 수가 보안·운영 성숙도를 보장하지 않음 |
 | 요구·인수 설계 | 고객 여정·필수/옵션 템플릿과 제품 명세 존재 | 인터뷰부터 운영 인수까지의 통합 고객 화면은 미구현 |
 
 Hello Agent는 Memory가 필요 없는 예제입니다. 기존 Service Desk의 메모리 통합 근거와 별도로 판단합니다. ContextForge·OPA 등 후보를 아키텍처 문서에 적었다고 통합 완료로 표시하지 않습니다. 상세 근거는 [Hello Agent 인수 기록](../../examples/hello-agent/DELIVERY.md)과 [고객 전달 명세](customer-delivery-spec.md)를 확인합니다.
