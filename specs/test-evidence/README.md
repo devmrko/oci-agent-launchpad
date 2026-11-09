@@ -37,3 +37,5 @@ python3 scripts/spec_evidence.py check .run/travel-evidence.json
 [인터뷰 요구 검토](../interview-handoff/README.md) → [구현 명세와 연결·변경 영향 확인](../change-impact/README.md) → **연결된 테스트 실행 및 결과 보관** 순서입니다. 이번 기능은 구현 명세의 요구 ID와 파일 해시를 기준으로 합니다. 인터뷰 검토 기록의 유효성은 기존 변경 영향 검사로 별도 확인해야 합니다.
 
 `run`은 저장소의 테스트 코드를 실행하므로 신뢰하는 저장소에서 사용하세요. 프로세스 분리는 보안 샌드박스가 아닙니다. 이 결과는 수정 가능한 로컬 JSON이며 서명된 증적이 아닙니다. 연결되지 않은 파일, 설치된 의존성·환경 변화, 테스트의 충분성, 실제 OCI 연동·배포 성공을 보증하지 않습니다. Git 커밋이 같더라도 작업 파일은 다를 수 있어 실제 파일 해시를 기준으로 삼습니다.
+
+다른 프로젝트의 명세와 코드를 검증하려면 run·check 명령에 `--root /path/to/project`를 지정합니다. [작업 전달과 반환된 구현 검증](../developer-handoff/README.md)에 전체 절차가 있습니다.

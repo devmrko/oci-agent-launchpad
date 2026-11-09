@@ -36,6 +36,8 @@ python3 examples/enterprise-ai-web/server.py --offline
 
 `http://127.0.0.1:8768`에서 숙박 일수를 입력하고 규정으로 계산합니다. [명세에서 검증까지 따라하기](specs/travel-allowance/README.md)
 
+다른 개발자나 도구에 구현을 맡길 때는 [변경 작업 지시서 만들기](specs/developer-handoff/README.md)로 요구·합격 조건·코드 위치를 정리할 수 있습니다. 별도 프로젝트 루트를 지정해 반환된 구현의 테스트도 실행할 수 있습니다.
+
 코드를 수정하거나 기여하려면 [로컬 검사와 자동 검증 안내](CONTRIBUTING.md)를 참고하세요.
 
 ## 어떤 문제를 해결하려고 하나요

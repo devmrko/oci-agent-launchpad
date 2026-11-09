@@ -81,8 +81,11 @@ def main():
     run.add_argument("--timeout", type=float, default=30)
     verify = sub.add_parser("check")
     verify.add_argument("evidence", type=Path)
+    for command in (run, verify):
+        command.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1],
+                             help="Project root; defaults to this repository")
     args = parser.parse_args()
-    root = Path(__file__).resolve().parents[1]
+    root = args.root.resolve()
     try:
         result = execute(root, args.bundle, args.output, args.timeout) if args.command == "run" else inspect(root, read(args.evidence))
     except (ValueError, KeyError, TypeError, SyntaxError, OSError):
