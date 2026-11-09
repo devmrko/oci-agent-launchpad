@@ -9,6 +9,7 @@ from check_spec_links import check
 from requirement_handoff import read, write_new
 from spec_impact import local
 from spec_init import line
+from spec_evidence import inspect as inspect_evidence
 
 
 def prepare(root, bundle, requirements, request, acceptance, output):
@@ -65,6 +66,70 @@ def inspect(root, baseline):
             "tests_executed": False, "implementation_accepted": False}
 
 
+
+def report(root, baseline, evidence, output):
+    changes = inspect(root, baseline)
+    request = line(baseline["request"])
+    acceptance = [line(item) for item in baseline["acceptance"]]
+    selected = baseline["requirements"]
+    if not acceptance or not isinstance(selected, list) or not selected:
+        raise ValueError("Missing requested requirements or criteria")
+    directory = local(root, baseline["bundle"])
+    reasons = []
+    missing, removed = [], []
+    try:
+        current = check(root, baseline["bundle"])
+        missing = sorted(set(selected) - set(current["requirements"]))
+        records = read(directory / "traceability.json")["requirements"]
+        current_tests = {(r["id"], t["path"], t["case"]) for r in records for t in r["tests"]}
+        old_tests = {(r["id"], t["path"], t["case"]) for r in baseline["selected_mapping"] for t in r["tests"]}
+        removed = [{"requirement": rid, "path": path, "case": case} for rid, path, case in sorted(old_tests - current_tests)]
+        if missing:
+            reasons.append("selected_requirements_missing")
+        if removed:
+            reasons.append("previous_tests_removed_or_reassigned")
+    except (OSError, KeyError, TypeError, SyntaxError, ValueError):
+        reasons.append("current_links_invalid")
+    evidence_state = {"freshness": "MISSING", "usable_pass": False}
+    if evidence is None:
+        reasons.append("test_evidence_missing")
+    else:
+        if local(root, evidence["bundle"]) != directory:
+            raise ValueError("Evidence belongs to a different specification")
+        evidence_state = inspect_evidence(root, evidence)
+        if not evidence_state["usable_pass"] or evidence.get("tests_executed") is not True:
+            reasons.append("test_evidence_not_current_pass")
+        if not all(evidence.get("requirements", {}).get(rid) == "PASS" for rid in selected):
+            reasons.append("selected_requirements_not_passed")
+    result = {"schema_version": 1, "created_at": datetime.now(timezone.utc).isoformat(),
+              "status": "CHECKS_REQUIRED" if reasons else "TESTS_CURRENT_REVIEW_PENDING",
+              "request": request, "requirements": selected, "changes": changes,
+              "evidence": evidence_state, "evidence_recorded_at": evidence.get("recorded_at") if evidence else None,
+              "reasons": reasons, "missing_requirements": missing,
+              "removed_tests": removed,
+              "acceptance": [{"text": item, "status": "HUMAN_REVIEW_PENDING"} for item in acceptance],
+              "tests_executed": False, "implementation_accepted": False, "approval_recorded": False}
+    content = f"# 구현 반환 검토 보고서\n\n{request}\n\n상태: `{result['status']}`. 모든 합격 조건은 사람 검토 대기 상태입니다.\n"
+    content += "\n## 요청한 합격 조건\n\n" + "".join(f"- [ ] {item}\n" for item in acceptance)
+    content += "\n## 연결 파일의 변경\n\n"
+    if changes["status"] == "UNCHANGED":
+        content += "연결 파일은 작업 전달 당시와 같습니다. 변경 요청이 실제 반영됐는지 확인하세요.\n"
+    else:
+        content += "".join(f"- `{name}`\n" for name in changes.get("changed_files", [])) or "현재 연결을 검사할 수 없습니다. review.json을 확인하세요.\n"
+    content += f"\n## 테스트 근거\n\n현재 파일과 비교한 상태: `{evidence_state['freshness']}`\n\n"
+    content += f"기록된 테스트 결과: `{evidence_state.get('recorded_status', 'MISSING')}`\n\n"
+    content += "추가 확인 항목: " + (", ".join(reasons) if reasons else "자동 검사 범위에서 없음") + "\n"
+    if removed:
+        content += "\n제거되거나 다른 요구로 이동한 기존 테스트:\n\n" + "".join(f"- {t['requirement']}: `{t['path']}` — `{t['case']}`\n" for t in removed)
+    content += "\n## 검토할 내용\n\n변경 diff와 새 조건의 경계·실패 테스트를 확인하세요. 테스트 통과는 요구 충족·고객 승인·배포 성공을 의미하지 않습니다. 보고서는 테스트를 재실행하지 않았으며 연결되지 않은 파일과 환경 변화는 검사 범위 밖입니다.\n"
+    if Path(output).is_symlink():
+        raise ValueError("Output must not be a symlink")
+    Path(output).mkdir(mode=0o700)
+    (Path(output) / "REVIEW.md").write_text(content, encoding="utf-8")
+    write_new(Path(output) / "review.json", result)
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -76,19 +141,25 @@ def main():
     make.add_argument("--output", required=True, type=Path)
     verify = commands.add_parser("check")
     verify.add_argument("baseline", type=Path)
-    for command in (make, verify):
+    review = commands.add_parser("report")
+    review.add_argument("baseline", type=Path)
+    review.add_argument("--evidence", type=Path)
+    review.add_argument("--output", required=True, type=Path)
+    for command in (make, verify, review):
         command.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     args = parser.parse_args()
     try:
         if args.command == "prepare":
             prepare(args.root, args.bundle, args.requirement, args.request, args.acceptance, args.output)
             result = {"status": "PREPARED", "tests_executed": False, "approval_recorded": False}
+        elif args.command == "report":
+            result = report(args.root, read(args.baseline), read(args.evidence) if args.evidence else None, args.output)
         else:
             result = inspect(args.root, read(args.baseline))
     except (OSError, ValueError, KeyError, TypeError, SyntaxError):
         parser.exit(1, "Check project paths, requirement IDs, inputs and a new output directory.\n")
     print(json.dumps(result, ensure_ascii=False, indent=2))
-    return 2 if result["status"] == "REVIEW_REQUIRED" else 0
+    return 2 if result["status"] in {"REVIEW_REQUIRED", "CHECKS_REQUIRED"} else 0
 
 
 if __name__ == "__main__":
