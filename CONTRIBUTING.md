@@ -17,6 +17,8 @@ python3 -S scripts/sdd_demo.py --output .run/contribution-demo
 
 테스트는 `OK`, 링크 검사는 `links_valid`, 전체 체험은 `DEMO_PASS`로 완료됩니다. 전체 체험을 다시 실행할 때는 새 출력 폴더 이름을 사용하세요. `.run`의 결과는 커밋하지 않습니다.
 
+2026-11-10에는 공개 커밋 `9abb5bd`를 별도 폴더에 새로 복제하고 macOS / Python 3.15.0에서 `python3 -S`로 재현했습니다. 출장비 CLI의 2박 계산 `200000`·모델 미사용, Hello Agent의 시간 조회, 전체 체험 `DEMO_PASS`, 출장비 테스트 근거 `PASS`·`CURRENT`를 확인했습니다. 출장비 앱 16개·SDD 도구 76개·Hello Agent 10개 테스트도 통과했습니다. 기존 작업 폴더의 미추적 파일이나 추가 Python 패키지를 사용하지 않은 확인이며, 다른 사용자의 PC·브라우저 시각 검증·OCI 배포를 포함하지 않습니다. 같은 커밋의 Ubuntu·macOS / Python 3.12 CI도 통과했습니다.
+
 ## 변경을 제안할 때
 
 - 해결하려는 문제와 사용자가 보게 될 동작을 설명합니다.

@@ -6,6 +6,31 @@ AI에게 답변을 받는 데서 출발해 **업무 도구 실행 → 권한과 
 
 현재는 **엔지니어 동행형 알파**입니다. 준비된 환경에서 모델·도구 실행, VM·OKE 배포, 기억 저장·검색, 실행 추적을 확인했습니다. 새 고객 환경에 한 번에 설치하는 완성 제품이나 운영 서비스는 아직 아닙니다. [알파 제공 범위](ALPHA.md)
 
+## 처음 실행하기 — 계정 없이 SDD 흐름 확인
+
+Git과 **Python 3.12 이상**을 준비하세요. 아래 경로는 추가 패키지·OCI 계정·AI 도구 없이 실행할 수 있습니다. macOS·Linux 터미널에서 시작합니다.
+
+```sh
+git clone https://github.com/devmrko/oci-agent-launchpad.git
+cd oci-agent-launchpad
+python3 --version
+python3 -S examples/enterprise-ai-web/cli.py 2
+mkdir -p .run
+python3 -S scripts/sdd_demo.py --output .run/sdd-demo
+```
+
+계산 결과에 `200000`과 `model_used: false`, 체험 결과에 `DEMO_PASS`가 표시되면 첫 실행이 완료된 것입니다. 체험은 복사한 파일에서 **요구 검토 → 명세 연결 → 테스트 → 요구·코드 변경 감지**를 수행합니다. 합성 요구를 사용하며 앱을 자동 개발하거나 고객 승인·배포를 수행하지 않습니다.
+
+이미 저장소를 받았다면 그 폴더에서 `python3 --version`부터 실행하세요. 체험을 다시 실행할 때는 `.run/sdd-demo-2`처럼 새 출력 이름을 사용합니다. 기존 결과는 덮어쓰지 않습니다. `python3`가 없거나 버전이 낮으면 Python 3.12 이상을 먼저 설치해야 합니다.
+
+[체험 결과 읽기](specs/sdd-walkthrough/README.md)에서 변경 감지 결과를 확인하고, [요구별 테스트 결과 남기기](specs/test-evidence/README.md)로 이어가세요. 화면으로 계산하려면 별도 터미널의 저장소 루트에서 다음 명령을 실행합니다.
+
+```sh
+python3 -S examples/enterprise-ai-web/server.py --offline
+```
+
+`http://127.0.0.1:8768`에서 숙박 일수를 입력할 수 있습니다. 서버를 종료하려면 터미널에서 `Ctrl+C`를 누릅니다. 포트를 이미 사용 중이면 기존 서버를 종료하거나 `--port 8769`로 실행하고 해당 주소를 여세요.
+
 ## 명세를 중심으로 확장하기
 
 SDD는 요구 명세를 기준으로 설계·구현·테스트와 변경을 이어가는 방식입니다. 고객 인터뷰는 요구를 얻는 한 방법이며, 기존 문서나 직접 작성한 명세로도 시작할 수 있습니다. 결과물은 웹·API·업무 자동화·AI 에이전트가 될 수 있고, AI는 필요한 기능에 선택적으로 연결합니다.
@@ -21,20 +46,6 @@ SDD는 요구 명세를 기준으로 설계·구현·테스트와 변경을 이�
 [요구별 테스트 결과](specs/test-evidence/README.md)는 연결된 테스트를 실제 실행해 요구 ID별 결과와 파일 해시를 JSON으로 남깁니다. 코드가 바뀌면 재실행이 필요하다고 표시합니다. OCI 계정 없이 출장비 예제로 확인할 수 있습니다.
 
 자신의 기능을 시작하려면 [직접 입력한 요구로 명세 만들기](specs/spec-starter/README.md)를 사용하세요. 목적과 요구에서 편집 가능한 명세·설계·작업·연결 파일을 만들며, 구현과 검증이 필요한 초안으로 표시합니다.
-
-처음 확인하신다면 [SDD 전체 흐름 체험](specs/sdd-walkthrough/README.md)부터 시작하세요. 명령 하나로 합성 요구 검토·명세 연결·테스트 실행·변경 감지를 별도 폴더에서 재현합니다. 실제 고객 승인이나 배포를 수행하지 않습니다.
-
-```sh
-mkdir -p .run
-python3 scripts/sdd_demo.py --output .run/sdd-demo
-```
-
-```sh
-# Python 3.12 이상. 패키지 설치·OCI 계정 없이 실행합니다.
-python3 examples/enterprise-ai-web/server.py --offline
-```
-
-`http://127.0.0.1:8768`에서 숙박 일수를 입력하고 규정으로 계산합니다. [명세에서 검증까지 따라하기](specs/travel-allowance/README.md)
 
 [두 번째 적용 사례인 Hello Agent](specs/hello-agent/README.md)에서는 기존 시간 조회 앱에 지원 도시 목록을 추가하고, 같은 작업 전달·검증 도구를 재사용했습니다.
 
@@ -119,15 +130,13 @@ Enterprise AI 체험은 OpenAI SDK의 요청 형식을 사용하지만 **실제 
 
 ## 가장 작은 예제부터 실행하기
 
-**먼저 외부 계정 없이 흐름을 보려면** Python 3.12 이상에서 Hello Agent의 로컬 데모를 실행합니다.
+**시간 조회 도구의 동작을 보려면** 저장소 루트에서 실행합니다.
 
 ```sh
-git clone https://github.com/devmrko/oci-agent-launchpad.git
-cd oci-agent-launchpad
-python3 examples/hello-agent/agent.py --mode demo '지금 서울 몇 시인가요?'
+python3 -S examples/hello-agent/agent.py --mode demo '지금 서울 몇 시인가요?'
 ```
 
-결과의 `decision`에 `get_time`, `tool_result`에 실행 시점의 서울 시간이 표시됩니다. 이 모드는 규칙 기반 시연이며 `model_used: false`를 표시합니다. 실제 모델을 시험하려면 다음 단계로 진행합니다.
+결과의 `decision`에 `get_time`, `tool_result`에 실행 시점의 서울 시간이 표시됩니다. 이 모드는 규칙 기반 시연이며 `model_used: false`를 표시합니다.
 
 **실제 OCI 모델과 계산 도구를 사용하려면** [로컬 웹 체험의 시작 안내](examples/enterprise-ai-web/README.md#시작하기)를 따릅니다. OCI 인증, ACTIVE 상태의 Generative AI 프로젝트, 모델 호출 권한이 필요하며 사용료가 발생할 수 있습니다. 화면은 로컬에만 열리고 모델 요청은 지정한 OCI 리전으로 전송됩니다.
 
