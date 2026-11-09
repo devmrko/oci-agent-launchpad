@@ -20,6 +20,13 @@ SDD는 요구 명세를 기준으로 설계·구현·테스트와 변경을 이�
 
 [요구별 테스트 결과](specs/test-evidence/README.md)는 연결된 테스트를 실제 실행해 요구 ID별 결과와 파일 해시를 JSON으로 남깁니다. 코드가 바뀌면 재실행이 필요하다고 표시합니다. OCI 계정 없이 출장비 예제로 확인할 수 있습니다.
 
+처음 확인하신다면 [SDD 전체 흐름 체험](specs/sdd-walkthrough/README.md)부터 시작하세요. 명령 하나로 합성 요구 검토·명세 연결·테스트 실행·변경 감지를 별도 폴더에서 재현합니다. 실제 고객 승인이나 배포를 수행하지 않습니다.
+
+```sh
+mkdir -p .run
+python3 scripts/sdd_demo.py --output .run/sdd-demo
+```
+
 ```sh
 # Python 3.12 이상. 패키지 설치·OCI 계정 없이 실행합니다.
 python3 examples/enterprise-ai-web/server.py --offline
