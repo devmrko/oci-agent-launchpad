@@ -5,7 +5,8 @@
       "id": "REQ-001",
       "implementation": [
         "examples/enterprise-ai-web/server.py",
-        "examples/enterprise-ai-web/index.html"
+        "examples/enterprise-ai-web/index.html",
+        "examples/enterprise-ai-web/allowance.py"
       ],
       "tests": [
         {
@@ -22,7 +23,8 @@
       "id": "REQ-002",
       "implementation": [
         "examples/enterprise-ai-web/server.py",
-        "examples/enterprise-ai-web/index.html"
+        "examples/enterprise-ai-web/index.html",
+        "examples/enterprise-ai-web/allowance.py"
       ],
       "tests": [
         {
@@ -35,7 +37,8 @@
       "id": "REQ-003",
       "implementation": [
         "examples/enterprise-ai-web/server.py",
-        "examples/enterprise-ai-web/index.html"
+        "examples/enterprise-ai-web/index.html",
+        "examples/enterprise-ai-web/allowance.py"
       ],
       "tests": [
         {
@@ -52,7 +55,8 @@
       "id": "REQ-004",
       "implementation": [
         "examples/enterprise-ai-web/server.py",
-        "examples/enterprise-ai-web/index.html"
+        "examples/enterprise-ai-web/index.html",
+        "examples/enterprise-ai-web/allowance.py"
       ],
       "tests": [
         {
@@ -73,7 +77,8 @@
       "id": "REQ-005",
       "implementation": [
         "examples/enterprise-ai-web/server.py",
-        "examples/enterprise-ai-web/index.html"
+        "examples/enterprise-ai-web/index.html",
+        "examples/enterprise-ai-web/allowance.py"
       ],
       "tests": [
         {
@@ -87,6 +92,23 @@
         {
           "path": "examples/enterprise-ai-web/test_server.py",
           "case": "BoundaryTests.test_limit_is_enforced_before_model_call"
+        }
+      ]
+    },
+    {
+      "id": "REQ-006",
+      "implementation": [
+        "examples/enterprise-ai-web/allowance.py",
+        "examples/enterprise-ai-web/cli.py"
+      ],
+      "tests": [
+        {
+          "path": "examples/enterprise-ai-web/test_cli.py",
+          "case": "CliTests.test_json_matches_shared_rule"
+        },
+        {
+          "path": "examples/enterprise-ai-web/test_cli.py",
+          "case": "CliTests.test_invalid_input_has_no_success_output"
         }
       ]
     }

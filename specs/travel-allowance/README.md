@@ -43,3 +43,7 @@ python3 examples/enterprise-ai-web/server.py --offline
 2026년 11월 9일 앱 테스트 12건과 링크 검사기 테스트 4건 통과. `python3 -S`로 외부 site-packages를 로드하지 않은 서버에서 2박 계산 HTTP 응답 `200000`, `model_used=false`, OCI 호출 경로 409 거부를 확인했습니다. 브라우저 시각 검증과 이 앱의 OCI 호스팅은 수행하지 않았습니다.
 
 인터뷰 원문을 요구 초안과 검토 기록으로 옮기는 절차는 [인터뷰 근거 연결 도구](../interview-handoff/README.md)에서 확인할 수 있습니다. 현재 명세에 자동 병합하거나 코드·배포를 변경하지 않으며, 검토한 요구와 ID를 사람이 대조해 반영합니다. 같은 요구 ID에 실제 OCI 배포·인수 결과를 연결하는 것은 후속 단계입니다.
+
+## 웹과 CLI에서 같은 규정 사용
+
+`python3 examples/enterprise-ai-web/cli.py 2`를 실행하면 웹 서버 없이 JSON으로 200,000원 계산 결과를 받습니다. 웹의 계산 API와 CLI는 같은 `allowance.py` 함수를 사용합니다. CLI는 선택적 실행 경로이며 OCI 연결이나 특정 앱 형태를 요구하지 않습니다. [입력·출력과 오류 안내](../../examples/enterprise-ai-web/README.md#터미널에서-같은-계산-사용하기)

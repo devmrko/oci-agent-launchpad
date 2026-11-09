@@ -7,6 +7,7 @@ from pathlib import Path
 import secrets
 import threading
 import sys
+from allowance import estimate
 
 
 def preflight():
@@ -33,13 +34,6 @@ def preflight():
     if not failures:
         print("로컬 준비 점검 통과. OCI 권한·프로젝트 ACTIVE 상태·모델 지원은 실제 호출에서 확인합니다.")
     return not failures
-
-
-def estimate(nights):
-    if type(nights) is not int or not 1 <= nights <= 10:
-        raise ValueError("숙박 일수는 1~10 사이의 정수여야 합니다.")
-    return {"nights": nights, "nightly_limit": 100000, "amount": nights * 100000,
-            "formula": f"100,000원 × {nights}박 = {nights * 100000:,}원", "model_used": False}
 
 
 def validate(value):
