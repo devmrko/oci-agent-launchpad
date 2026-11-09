@@ -10,6 +10,7 @@ from requirement_handoff import read, write_new
 from spec_impact import local
 from spec_init import line
 from spec_evidence import inspect as inspect_evidence
+from command_evidence import inspect as inspect_command
 
 
 def prepare(root, bundle, requirements, request, acceptance, output):
@@ -67,7 +68,7 @@ def inspect(root, baseline):
 
 
 
-def report(root, baseline, evidence, output):
+def report(root, baseline, evidence, output, command_evidence=None):
     changes = inspect(root, baseline)
     request = line(baseline["request"])
     acceptance = [line(item) for item in baseline["acceptance"]]
@@ -76,6 +77,9 @@ def report(root, baseline, evidence, output):
         raise ValueError("Missing requested requirements or criteria")
     directory = local(root, baseline["bundle"])
     reasons = []
+    command_evidence = command_evidence or []
+    command_states = []
+    current = None
     missing, removed = [], []
     try:
         current = check(root, baseline["bundle"])
@@ -92,7 +96,8 @@ def report(root, baseline, evidence, output):
         reasons.append("current_links_invalid")
     evidence_state = {"freshness": "MISSING", "usable_pass": False}
     if evidence is None:
-        reasons.append("test_evidence_missing")
+        if not command_evidence:
+            reasons.append("test_evidence_missing")
     else:
         if local(root, evidence["bundle"]) != directory:
             raise ValueError("Evidence belongs to a different specification")
@@ -101,8 +106,32 @@ def report(root, baseline, evidence, output):
             reasons.append("test_evidence_not_current_pass")
         if not all(evidence.get("requirements", {}).get(rid) == "PASS" for rid in selected):
             reasons.append("selected_requirements_not_passed")
+    referenced, covered = set(), set()
+    for item in command_evidence:
+        state = inspect_command(root, item)
+        plan = read(local(root, item["plan"]))
+        if local(root, plan["spec"]) != directory / "spec.md":
+            raise ValueError("Command evidence belongs to a different specification")
+        if item.get("requirements") != plan.get("requirements"):
+            reasons.append("command_requirement_references_changed")
+        referenced.update(plan["requirements"])
+        covered.update(item["files"])
+        if not state["usable_command_success"]:
+            reasons.append("command_evidence_not_current_success")
+        command_states.append({**state, "command": item.get("command", []),
+                               "recorded_status": item.get("status"), "exit_code": item.get("exit_code"),
+                               "recorded_at": item.get("recorded_at"), "requirements": item.get("requirements"),
+                               "stable_during_run": item.get("stable_during_run"), "plan": item["plan"]})
+    if command_evidence:
+        if not set(selected) <= referenced:
+            reasons.append("command_requirement_references_missing")
+        if current is None or not set(current["files"]) <= covered:
+            reasons.append("command_file_coverage_incomplete")
+    reasons = list(dict.fromkeys(reasons))
+    ready = "TESTS_CURRENT_REVIEW_PENDING" if evidence is not None else "COMMANDS_CURRENT_REVIEW_PENDING"
     result = {"schema_version": 1, "created_at": datetime.now(timezone.utc).isoformat(),
-              "status": "CHECKS_REQUIRED" if reasons else "TESTS_CURRENT_REVIEW_PENDING",
+              "status": "CHECKS_REQUIRED" if reasons else ready,
+              "command_evidence": command_states, "requirements_verified": False,
               "request": request, "requirements": selected, "changes": changes,
               "evidence": evidence_state, "evidence_recorded_at": evidence.get("recorded_at") if evidence else None,
               "reasons": reasons, "missing_requirements": missing,
@@ -116,9 +145,15 @@ def report(root, baseline, evidence, output):
         content += "연결 파일은 작업 전달 당시와 같습니다. 변경 요청이 실제 반영됐는지 확인하세요.\n"
     else:
         content += "".join(f"- `{name}`\n" for name in changes.get("changed_files", [])) or "현재 연결을 검사할 수 없습니다. review.json을 확인하세요.\n"
-    content += f"\n## 테스트 근거\n\n현재 파일과 비교한 상태: `{evidence_state['freshness']}`\n\n"
+    content += f"\n## 요구별 테스트 근거\n\n현재 파일과 비교한 상태: `{evidence_state['freshness']}`\n\n"
     content += f"기록된 테스트 결과: `{evidence_state.get('recorded_status', 'MISSING')}`\n\n"
-    content += "추가 확인 항목: " + (", ".join(reasons) if reasons else "자동 검사 범위에서 없음") + "\n"
+    if command_states:
+        content += "\n## 테스트 명령 실행 근거\n\n명령 성공은 요구별 테스트 통과 판정이 아닙니다. 요구 충족 여부는 사람 검토 대기입니다.\n\n"
+        for entry in command_states:
+            content += (f"- 명령(argv): `{json.dumps(entry['command'], ensure_ascii=False)}`\n"
+                        f"  결과: `{entry['recorded_status']}`, 종료 코드: `{entry['exit_code']}`, "
+                        f"현재성: `{entry['freshness']}`, 실행 중 파일 일치: `{entry['stable_during_run']}`\n")
+    content += "\n추가 확인 항목: " + (", ".join(reasons) if reasons else "자동 검사 범위에서 없음") + "\n"
     if removed:
         content += "\n제거되거나 다른 요구로 이동한 기존 테스트:\n\n" + "".join(f"- {t['requirement']}: `{t['path']}` — `{t['case']}`\n" for t in removed)
     content += "\n## 검토할 내용\n\n변경 diff와 새 조건의 경계·실패 테스트를 확인하세요. 테스트 통과는 요구 충족·고객 승인·배포 성공을 의미하지 않습니다. 보고서는 테스트를 재실행하지 않았으며 연결되지 않은 파일과 환경 변화는 검사 범위 밖입니다.\n"
@@ -144,6 +179,7 @@ def main():
     review = commands.add_parser("report")
     review.add_argument("baseline", type=Path)
     review.add_argument("--evidence", type=Path)
+    review.add_argument("--command-evidence", type=Path, action="append", default=[])
     review.add_argument("--output", required=True, type=Path)
     for command in (make, verify, review):
         command.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
@@ -153,7 +189,8 @@ def main():
             prepare(args.root, args.bundle, args.requirement, args.request, args.acceptance, args.output)
             result = {"status": "PREPARED", "tests_executed": False, "approval_recorded": False}
         elif args.command == "report":
-            result = report(args.root, read(args.baseline), read(args.evidence) if args.evidence else None, args.output)
+            result = report(args.root, read(args.baseline), read(args.evidence) if args.evidence else None, args.output,
+                            [read(path) for path in args.command_evidence])
         else:
             result = inspect(args.root, read(args.baseline))
     except (OSError, ValueError, KeyError, TypeError, SyntaxError):
