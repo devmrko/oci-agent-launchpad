@@ -138,6 +138,8 @@ python3 -m venv .run/enterprise-ai-venv
 
 이번 시험에서 생성된 임시 컨테이너 2개는 삭제했습니다. 테스트용 프로젝트는 콘솔에서 확인하고 후속 시험에 사용할 수 있도록 유지했습니다.
 
+버튼으로 직접 시험하려면 [로컬 웹 체험 앱](../examples/enterprise-ai-web/README.md)을 실행하세요. 숙박 일수를 고르고 실제 OCI 응답과 Python 계산 출력을 확인할 수 있습니다. 앱은 로컬에서만 열리며 외부 공개 호출 서버로 배포하지 않았습니다.
+
 ## 서울 리전에서 사용할 때
 
 현재 공식 Enterprise AI 지원 목록에는 서울이 포함되어 있지 않습니다. 서울에서 운영하는 앱이 지원 리전의 기능을 호출하는 구성은 검토할 수 있지만, 처리 위치와 모델별 지원 여부를 확인해야 합니다. 일부 모델은 외부 제공자에서 처리하므로 OCI 호출 리전만으로 데이터 처리 위치를 판단하지 않습니다. [모델과 리전별 지원 조건](https://docs.oracle.com/en-us/iaas/Content/generative-ai/agentic-regions.htm)
