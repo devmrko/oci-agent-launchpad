@@ -3,7 +3,20 @@ import json
 import threading
 import unittest
 from types import SimpleNamespace as Item
-from server import Server, assess
+from server import Server, assess, estimate
+
+
+class EstimateTests(unittest.TestCase):
+    def test_rule_amounts(self):
+        for nights in (1, 2, 10):
+            result = estimate(nights)
+            self.assertEqual(result["amount"], nights * 100000)
+            self.assertFalse(result["model_used"])
+
+    def test_invalid_nights(self):
+        for value in (True, 0, 11, "2", 2.5, None):
+            with self.assertRaises(ValueError):
+                estimate(value)
 
 
 class ResultTests(unittest.TestCase):
@@ -46,9 +59,9 @@ class BoundaryTests(unittest.TestCase):
         self.server.server_close()
         self.thread.join()
 
-    def post(self, value, origin=None, token=None):
+    def post(self, value, origin=None, token=None, path="/api/run"):
         connection = http.client.HTTPConnection("127.0.0.1", self.server.server_port)
-        connection.request("POST", "/api/run", json.dumps(value), {
+        connection.request("POST", path, json.dumps(value), {
             "Content-Type": "application/json",
             "Origin": origin or f"http://127.0.0.1:{self.server.server_port}",
             "X-Demo-Token": self.server.token if token is None else token,
@@ -57,6 +70,21 @@ class BoundaryTests(unittest.TestCase):
         status, body = response.status, response.read()
         connection.close()
         return status, body
+
+    def test_offline_estimate_never_calls_model(self):
+        self.server.offline = True
+        status, body = self.post({"nights": 2}, path="/api/estimate")
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)["amount"], 200000)
+        self.assertFalse(json.loads(body)["model_used"])
+        self.assertEqual(self.server.remaining, 10)
+        self.assertEqual(self.calls, [])
+        self.assertEqual(self.post({"nights": 2, "use_tool": False})[0], 409)
+        self.assertEqual(self.calls, [])
+
+    def test_estimate_access_and_fields(self):
+        self.assertEqual(self.post({"nights": 2}, path="/api/estimate", origin="https://example.org")[0], 403)
+        self.assertEqual(self.post({"nights": 2, "rate": 1}, path="/api/estimate")[0], 400)
 
     def test_invalid_inputs_never_reach_oci(self):
         for nights in [True, 0, 11, "2", 2.5]:

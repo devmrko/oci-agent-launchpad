@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "implementation": [
+        "examples/enterprise-ai-web/server.py",
+        "examples/enterprise-ai-web/index.html"
+      ],
+      "tests": [
+        {
+          "path": "examples/enterprise-ai-web/test_server.py",
+          "case": "EstimateTests.test_rule_amounts"
+        },
+        {
+          "path": "examples/enterprise-ai-web/test_server.py",
+          "case": "EstimateTests.test_invalid_nights"
+        }
+      ]
+    },
+    {
+      "id": "REQ-002",
+      "implementation": [
+        "examples/enterprise-ai-web/server.py",
+        "examples/enterprise-ai-web/index.html"
+      ],
+      "tests": [
+        {
+          "path": "examples/enterprise-ai-web/test_server.py",
+          "case": "BoundaryTests.test_offline_estimate_never_calls_model"
+        }
+      ]
+    },
+    {
+      "id": "REQ-003",
+      "implementation": [
+        "examples/enterprise-ai-web/server.py",
+        "examples/enterprise-ai-web/index.html"
+      ],
+      "tests": [
+        {
+          "path": "examples/enterprise-ai-web/test_server.py",
+          "case": "ResultTests.test_plain_answer_does_not_claim_tool_verification"
+        },
+        {
+          "path": "examples/enterprise-ai-web/test_server.py",
+          "case": "BoundaryTests.test_provider_error_does_not_leak_body"
+        }
+      ]
+    },
+    {
+      "id": "REQ-004",
+      "implementation": [
+        "examples/enterprise-ai-web/server.py",
+        "examples/enterprise-ai-web/index.html"
+      ],
+      "tests": [
+        {
+          "path": "examples/enterprise-ai-web/test_server.py",
+          "case": "ResultTests.test_wrong_calculation_is_not_verified"
+        },
+        {
+          "path": "examples/enterprise-ai-web/test_server.py",
+          "case": "ResultTests.test_empty_answer_and_failed_tool_do_not_pass"
+        },
+        {
+          "path": "examples/enterprise-ai-web/test_server.py",
+          "case": "ResultTests.test_correct_output_matches"
+        }
+      ]
+    },
+    {
+      "id": "REQ-005",
+      "implementation": [
+        "examples/enterprise-ai-web/server.py",
+        "examples/enterprise-ai-web/index.html"
+      ],
+      "tests": [
+        {
+          "path": "examples/enterprise-ai-web/test_server.py",
+          "case": "BoundaryTests.test_estimate_access_and_fields"
+        },
+        {
+          "path": "examples/enterprise-ai-web/test_server.py",
+          "case": "BoundaryTests.test_cross_origin_and_missing_token_rejected"
+        },
+        {
+          "path": "examples/enterprise-ai-web/test_server.py",
+          "case": "BoundaryTests.test_limit_is_enforced_before_model_call"
+        }
+      ]
+    }
+  ]
+}

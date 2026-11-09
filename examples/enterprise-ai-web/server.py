@@ -35,11 +35,17 @@ def preflight():
     return not failures
 
 
+def estimate(nights):
+    if type(nights) is not int or not 1 <= nights <= 10:
+        raise ValueError("숙박 일수는 1~10 사이의 정수여야 합니다.")
+    return {"nights": nights, "nightly_limit": 100000, "amount": nights * 100000,
+            "formula": f"100,000원 × {nights}박 = {nights * 100000:,}원", "model_used": False}
+
+
 def validate(value):
     if not isinstance(value, dict) or set(value) != {"nights", "use_tool"}:
         raise ValueError("숙박 일수와 계산 도구 여부만 입력해 주세요.")
-    if type(value["nights"]) is not int or not 1 <= value["nights"] <= 10:
-        raise ValueError("숙박 일수는 1~10 사이의 정수여야 합니다.")
+    estimate(value["nights"])
     if type(value["use_tool"]) is not bool:
         raise ValueError("계산 도구 선택이 올바르지 않습니다.")
     return value
@@ -112,9 +118,10 @@ def invoke(project, region, value):
 class Server(ThreadingHTTPServer):
     daemon_threads = False
 
-    def __init__(self, port, project, region, runner=None):
+    def __init__(self, port, project=None, region=None, runner=None, offline=False):
         super().__init__(("127.0.0.1", port), Handler)
         self.project, self.region = project, region
+        self.offline = offline
         self.token = secrets.token_urlsafe(32)
         self.gate = threading.Lock()
         self.remaining = 10
@@ -143,10 +150,10 @@ class Handler(BaseHTTPRequestHandler):
         if not self.correct_host():
             return self.send(403, {"error": "로컬 주소로 접속해 주세요."})
         if self.path == "/":
-            page = Path(__file__).with_name("index.html").read_text().replace("__TOKEN__", self.server.token)
+            page = Path(__file__).with_name("index.html").read_text().replace("__TOKEN__", self.server.token).replace("__OFFLINE__", json.dumps(self.server.offline))
             return self.send(200, page.encode(), "text/html; charset=utf-8")
         if self.path == "/health":
-            return self.send(200, {"status": "up", "remaining": self.server.remaining})
+            return self.send(200, {"status": "up", "remaining": self.server.remaining, "offline": self.server.offline})
         self.send(404, {"error": "없는 경로입니다."})
 
     def do_POST(self):
@@ -155,13 +162,20 @@ class Handler(BaseHTTPRequestHandler):
         if (not self.correct_host() or self.headers.get("Origin") != expected_origin
                 or not hmac.compare_digest(self.headers.get("X-Demo-Token", "").encode(), self.server.token.encode())):
             return self.send(403, {"error": "로컬 체험 화면에서 다시 시도해 주세요."})
-        if self.path != "/api/run":
+        if self.path not in ("/api/run", "/api/estimate"):
             return self.send(404, {"error": "없는 경로입니다."})
+        if self.path == "/api/run" and self.server.offline:
+            return self.send(409, {"error": "규정 계산 모드입니다. OCI 설명은 OCI 모드에서만 사용합니다."})
         try:
             size = int(self.headers.get("Content-Length", "0"))
             if not 0 < size <= 1024 or self.headers.get("Content-Type") != "application/json":
                 raise ValueError("입력 형식이 올바르지 않습니다.")
-            value = validate(json.loads(self.rfile.read(size)))
+            value = json.loads(self.rfile.read(size))
+            if self.path == "/api/estimate":
+                if not isinstance(value, dict) or set(value) != {"nights"}:
+                    raise ValueError("숙박 일수만 입력하세요.")
+                return self.send(200, estimate(value["nights"]))
+            value = validate(value)
         except (ValueError, UnicodeError):
             return self.send(400, {"error": "숙박 1~10박과 계산 도구 선택을 확인해 주세요."})
         if not self.server.gate.acquire(blocking=False):
@@ -186,15 +200,16 @@ if __name__ == "__main__":
     parser.add_argument("--project")
     parser.add_argument("--region")
     parser.add_argument("--check", action="store_true", help="로컬 준비만 확인하며 OCI를 호출하지 않습니다")
+    parser.add_argument("--offline", action="store_true", help="OCI 계정·패키지 없이 규정 계산만 실행")
     parser.add_argument("--port", type=int, default=8768)
     args = parser.parse_args()
     if args.check:
         raise SystemExit(0 if preflight() else 1)
-    if not args.project or not args.region:
+    if not args.offline and (not args.project or not args.region):
         parser.error("--project와 --region을 지정해 주세요. 처음이면 --check로 준비 상태를 확인하세요.")
-    if not preflight():
+    if not args.offline and not preflight():
         raise SystemExit(1)
-    with Server(args.port, args.project, args.region) as server:
+    with Server(args.port, args.project, args.region, offline=args.offline) as server:
         print(f"Local demo: http://127.0.0.1:{server.server_port}", flush=True)
         try:
             server.serve_forever()
