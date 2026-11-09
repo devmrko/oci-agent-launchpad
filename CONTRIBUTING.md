@@ -9,6 +9,7 @@ Git과 Python 3.12 이상을 준비하고 저장소 루트에서 실행합니다
 ```sh
 python3 -S -m unittest discover -s examples/enterprise-ai-web -p 'test_*.py'
 python3 -S -m unittest discover -s scripts -p 'test_*.py'
+python3 -S -m unittest discover -s examples/hello-agent -p test_agent.py
 python3 -S scripts/check_spec_links.py specs/travel-allowance
 mkdir -p .run
 python3 -S scripts/sdd_demo.py --output .run/contribution-demo
@@ -29,6 +30,6 @@ python3 -S scripts/sdd_demo.py --output .run/contribution-demo
 
 [Offline SDD checks](https://github.com/devmrko/oci-agent-launchpad/actions/workflows/offline-sdd.yml)는 main 변경과 pull request에서 Ubuntu·macOS / Python 3.12로 위 명령을 실행하도록 구성했습니다. Actions 탭에서 해당 커밋의 각 작업 결과와 실패 단계를 확인할 수 있습니다. 수동 실행도 가능합니다.
 
-이 검사는 SDD 도구와 출장비 웹·CLI 예제를 대상으로 합니다. 실제 OCI 호출, 다른 앱·인프라 전체, 화면의 시각적 품질, 운영 배포를 검증하지 않습니다. 합성 데모 검토 기록은 실제 고객 승인이 아닙니다. 테스트가 통과해도 요구가 충분히 검증되는지는 리뷰가 필요합니다.
+이 검사는 SDD 도구, 출장비 웹·CLI 예제, Hello Agent의 계정 없는 로컬 도구 경로를 대상으로 합니다. 실제 OCI 호출, 다른 앱·인프라 전체, 화면의 시각적 품질, 운영 배포를 검증하지 않습니다. 합성 데모 검토 기록은 실제 고객 승인이 아닙니다. 테스트가 통과해도 요구가 충분히 검증되는지는 리뷰가 필요합니다.
 
 워크플로에는 저장소 읽기 권한만 부여하며 OCI 비밀값을 전달하지 않습니다. 코드 가져오기와 Python 준비에는 GitHub 네트워크를 사용합니다. Actions의 설정은 [checkout](https://github.com/actions/checkout)과 [setup-python](https://github.com/actions/setup-python)의 공식 안내를 참고했습니다.

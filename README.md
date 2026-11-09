@@ -36,6 +36,8 @@ python3 examples/enterprise-ai-web/server.py --offline
 
 `http://127.0.0.1:8768`에서 숙박 일수를 입력하고 규정으로 계산합니다. [명세에서 검증까지 따라하기](specs/travel-allowance/README.md)
 
+[두 번째 적용 사례인 Hello Agent](specs/hello-agent/README.md)에서는 기존 시간 조회 앱에 지원 도시 목록을 추가하고, 같은 작업 전달·검증 도구를 재사용했습니다.
+
 다른 개발자나 도구에 구현을 맡길 때는 [변경 작업 지시서 만들기](specs/developer-handoff/README.md)로 요구·합격 조건·코드 위치를 정리할 수 있습니다. 별도 프로젝트 루트를 지정해 반환된 구현의 테스트도 실행하고, 원래 요청·변경 파일·테스트 상태를 검토 보고서로 모을 수 있습니다.
 
 검증한 출장비 앱을 다른 사람이 실행하도록 전달하려면 [로컬 실행 ZIP 만들기](specs/offline-package/README.md)를 참고하세요.

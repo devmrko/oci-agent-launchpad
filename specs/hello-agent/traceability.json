@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "implementation": [
+        "examples/hello-agent/agent.py"
+      ],
+      "tests": [
+        {
+          "path": "examples/hello-agent/test_agent.py",
+          "case": "HelloTests.test_demo_clock_pipeline"
+        }
+      ]
+    },
+    {
+      "id": "REQ-002",
+      "implementation": [
+        "examples/hello-agent/agent.py"
+      ],
+      "tests": [
+        {
+          "path": "examples/hello-agent/test_agent.py",
+          "case": "HelloTests.test_unknown_tools_and_arguments_rejected"
+        },
+        {
+          "path": "examples/hello-agent/test_agent.py",
+          "case": "HelloTests.test_invalid_model_output_does_not_execute"
+        }
+      ]
+    },
+    {
+      "id": "REQ-003",
+      "implementation": [
+        "examples/hello-agent/agent.py"
+      ],
+      "tests": [
+        {
+          "path": "examples/hello-agent/test_agent.py",
+          "case": "HelloTests.test_unsupported"
+        },
+        {
+          "path": "examples/hello-agent/test_agent.py",
+          "case": "HelloTests.test_greeting"
+        },
+        {
+          "path": "examples/hello-agent/test_agent.py",
+          "case": "HelloTests.test_input_bounds"
+        }
+      ]
+    },
+    {
+      "id": "REQ-004",
+      "implementation": [
+        "examples/hello-agent/agent.py"
+      ],
+      "tests": [
+        {
+          "path": "examples/hello-agent/test_agent.py",
+          "case": "HelloTests.test_supported_city_list_in_demo"
+        },
+        {
+          "path": "examples/hello-agent/test_agent.py",
+          "case": "HelloTests.test_city_list_rejects_extra_arguments"
+        }
+      ]
+    }
+  ]
+}

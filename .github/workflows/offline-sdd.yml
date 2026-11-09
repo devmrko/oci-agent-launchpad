@@ -33,6 +33,12 @@ jobs:
           python-version: '3.12'
       - name: Test web and CLI examples
         run: python -S -m unittest discover -s examples/enterprise-ai-web -p 'test_*.py'
+      - name: Test Hello Agent local tools
+        run: python -S -m unittest discover -s examples/hello-agent -p test_agent.py
+      - name: Verify Hello Agent specification
+        run: |
+          mkdir -p .run
+          python -S scripts/spec_evidence.py run specs/hello-agent --output .run/hello-evidence.json
       - name: Test SDD tools
         run: python -S -m unittest discover -s scripts -p 'test_*.py'
       - name: Check specification links
