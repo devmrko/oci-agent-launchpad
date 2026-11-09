@@ -55,11 +55,21 @@ def identity(state):
     return identifier, (project['id'], vm['compartment_id'], vm['id'])
 
 
+def legacy_statements(pipelines, compartment, instance):
+    return [f"Allow any-user to {permission} in compartment id {compartment} where request.principal.id = '{pipeline}'"
+            for pipeline in pipelines for permission in PERMISSIONS] + [
+        f"Allow any-user to {permission} in compartment id {compartment} where request.principal.id = '{instance}'"
+        for permission in ('use instance-agent-command-execution-family', 'read generic-artifacts')]
+
+
 def statements(pipelines, compartment, instance):
-    result = [f"Allow any-user to {permission} in compartment id {compartment} where request.principal.id = '{pipeline}'"
-              for pipeline in pipelines for permission in PERMISSIONS]
-    result += [f"Allow any-user to {permission} in compartment id {compartment} where request.principal.id = '{instance}'"
-               for permission in ('use instance-agent-command-execution-family', 'read generic-artifacts')]
+    result = []
+    for permission in (*PERMISSIONS, 'use instance-agent-command-execution-family'):
+        principals = ([instance] if permission == 'use instance-agent-command-execution-family' else
+                      list(dict.fromkeys([*pipelines, *([instance] if permission == 'read generic-artifacts' else [])])))
+        conditions = [f"request.principal.id = '{principal}'" for principal in principals]
+        condition = conditions[0] if len(conditions) == 1 else 'any {' + ', '.join(conditions) + '}'
+        result.append(f"Allow any-user to {permission} in compartment id {compartment} where {condition}")
     return result
 
 
@@ -82,7 +92,8 @@ def prepare(owner_vars, owner_state, release_state, output):
             or any(not isinstance(v, str) or not re.fullmatch(r'ocid1\.devopsdeploypipeline\.[A-Za-z0-9._-]+', v) for v in previous)):
         raise ValueError('Invalid existing pipeline list')
     expected = statements([owner, *previous], target[1], target[2])
-    if policy['compartment_id'] != target[1] or sorted(policy['statements']) != sorted(expected):
+    legacy = legacy_statements([owner, *previous], target[1], target[2])
+    if policy['compartment_id'] != target[1] or sorted(policy['statements']) not in (sorted(expected), sorted(legacy)):
         raise ValueError('Owner inputs do not match existing policy; refresh inputs/state')
     inputs = copy.deepcopy(owner_vars)
     additions = list(previous)

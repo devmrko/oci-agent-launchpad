@@ -127,3 +127,27 @@ def test_only_computed_policy_etags_can_drift(inputs):
     plan['resource_drift'][0]['change']['after']['description'] = 'unexpected'
     with pytest.raises(ValueError, match='drift'):
         check_plan(plan, binding)
+
+
+def test_consolidation_preserves_exact_permission_principal_pairs():
+    import re
+    from prepare_pipeline_iam import legacy_statements
+    pipelines = [OWNER, OLD, NEW]
+    def expand(lines):
+        result = set()
+        for line in lines:
+            prefix, condition = line.split(' where ', 1)
+            for principal in re.findall(r"request\.principal\.id = '([^']+)'", condition):
+                result.add((prefix, principal))
+        return result
+    compact = statements(pipelines, 'compartment', 'vm')
+    assert len(compact) == 7
+    assert expand(compact) == expand(legacy_statements(pipelines, 'compartment', 'vm'))
+
+
+def test_legacy_policy_can_migrate_without_dropping_principals(inputs):
+    from prepare_pipeline_iam import legacy_statements
+    for item in inputs[1]['values']['root_module']['resources']:
+        if item['address'] == POLICY:
+            item['values']['statements'] = legacy_statements([OWNER, OLD], 'compartment', 'vm')
+    assert prepare(*inputs)['status'] == 'PREPARED'

@@ -1,0 +1,61 @@
+{
+  "status": "PASS",
+  "execution_location": "OKE",
+  "browser_verified": false,
+  "checks": {
+    "health": true,
+    "authentication": true,
+    "model_and_tool": true,
+    "telemetry_export": true,
+    "langfuse_input_output": true
+  },
+  "health": {
+    "status": "UP",
+    "version": "0.1.0",
+    "agent_id": "hello-agent"
+  },
+  "chat_http_status": 200,
+  "chat": {
+    "answer": "서울의 현재 시간은 2026-11-09T14:57:38+09:00입니다.",
+    "decision": {
+      "tool": "get_time",
+      "arguments": {
+        "city": "서울"
+      }
+    },
+    "tool_result": {
+      "city": "서울",
+      "timezone": "Asia/Seoul",
+      "time": "2026-11-09T14:57:38+09:00"
+    },
+    "trace_id": "30c3b2b0a21b7599fb22013e34c43340",
+    "version": "0.1.0",
+    "mode": "oci",
+    "telemetry": "exported"
+  },
+  "langfuse_http_status": 200,
+  "trace": {
+    "id": "30c3b2b0a21b7599fb22013e34c43340",
+    "observations": [
+      {
+        "name": "get_time",
+        "type": "TOOL",
+        "input_present": true,
+        "output_present": true
+      },
+      {
+        "name": "hello-agent.chat",
+        "type": "AGENT",
+        "input_present": true,
+        "output_present": true
+      },
+      {
+        "name": "oci.model",
+        "type": "GENERATION",
+        "input_present": true,
+        "output_present": true
+      }
+    ]
+  },
+  "observed_at_unix": 1794203863
+}

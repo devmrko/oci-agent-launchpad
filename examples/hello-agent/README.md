@@ -1,6 +1,6 @@
 # 에이전트 Hello World
 
-**최종 목표는 Companion 빌드 → OCI 배포 → 실제 모델·도구 실행 → Langfuse 관측입니다. 현재 예제는 그 선행 구현이며 배포 완주는 아직 미완료입니다.** [완주 조건과 현재 공백](DELIVERY.md)을 기준으로 진행합니다.
+**최종 목표는 Companion 빌드 → OCI 배포 → 실제 모델·도구 실행 → Langfuse 관측입니다. Functions 빌드·컨테이너 등록·Companion OKE 배포와 OKE 내부 실제 모델·도구 호출을 확인했습니다. Langfuse의 모델·도구·응답 입출력 조회도 통과했습니다. 브라우저 접속 경로와 Companion 앱 등록은 남아 있습니다.** [완주 조건과 현재 공백](DELIVERY.md)을 기준으로 진행합니다.
 
 “지금 서울 몇 시인가요?”라는 질문으로 에이전트의 최소 동작을 확인합니다.
 
@@ -8,7 +8,15 @@
 
 시간을 모델이 지어내지 않고 실행 환경의 시계에서 가져옵니다. 서울·도쿄·런던만 허용하며 업무 데이터나 외부 시스템을 변경하지 않습니다. 서버 시계가 정확하다는 전제가 필요합니다.
 
-## 바로 실행
+## OCI에서 실행하는 경로
+
+고객에게 전달할 기본 경로는 **Companion → Functions 소스 빌드 → Managed Build 이미지 패키징 → OCIR → OKE → 웹/API → Langfuse**입니다. Functions가 Python wheel을 만들고, Managed Build가 검증된 wheel을 컨테이너 이미지로 묶습니다. 현재 런타임은 서울 OKE, 모델 호출은 기존 허용 설정인 Ashburn의 Gemini Flash Lite입니다.
+
+`hello_web:create_app`은 웹 화면, 인증된 `/api/chat`, `/health`, `/api/capabilities`를 제공합니다. 실행 토큰과 Langfuse 키는 Kubernetes Secret에서 필요한 키만 주입합니다. OKE에서 모델을 호출할 때는 전용 ServiceAccount의 workload identity를 사용합니다.
+
+현재 Service는 사설 ClusterIP입니다. 브라우저와 Companion 서버에는 해당 네트워크에 도달할 관리 터널 또는 승인된 내부 접속 경로가 필요합니다. 아직 고객이 바로 접속할 수 있는 공개 URL은 없습니다. 준비·실행·검증 결과와 남은 항목은 [OCI 인수 상태](DELIVERY.md)를 확인하세요.
+
+## 로컬에서 흐름 익히기
 
 저장소 루트에서 Python 3.12 이상으로 실행합니다. 기존 `.venv`를 사용할 수 있습니다.
 
@@ -49,14 +57,14 @@ export HELLO_OCI_PROFILE='DEFAULT'
 
 | 기능 | 이 예제 | 확장할 때 |
 |---|---|---|
-| Runtime | 로컬 CLI | 독립 API·컨테이너 → VM/OKE |
+| Runtime | 독립 웹/API·OKE 컨테이너, 로컬 CLI | 고객 내부 접속·운영 배포 자동화 |
 | 모델 | OCI SDK 명시 호출 / 데모 분리 | Foundation 공통 모델 어댑터 선택 검토 |
 | 도구·정책 | allowlist·엄격한 인자 검사 | Gateway·Identity·업무 승인 |
-| 관측 | 콘솔의 선택·도구 결과·답변 | 동일 단계에 Langfuse trace 연결 |
+| 관측 | 모델·도구·응답 OTLP 전송 | Langfuse 조회 검증, 실패 추적·재전송 |
 | Memory | 불필요하므로 없음 | 기억할 업무 요구가 생기면 Oracle Agent Memory |
-| Companion | 아직 등록·배포하지 않음 | 앱 API·health 계약을 갖춘 뒤 등록 |
+| Companion | Functions 빌드·이미지 빌드·OKE 배포 실행 | 앱 등록·네트워크 접속, Job 검증 단계 지원 |
 
-Service Desk의 DB·웹 인증·메모리 코드를 의존하지 않는 교육용 단일 파일입니다. Python Foundation 통합, 웹 GUI, OCI 배포, Langfuse, 운영 인증은 이 예제에 아직 구현하지 않았습니다. 전체 플랫폼 기능 완료를 뜻하지 않습니다.
+Service Desk 앱 코드를 의존하지 않는 독립 패키지입니다. Python Foundation 인증 모듈과 웹 GUI를 사용합니다. 현재 접근 토큰은 합성 데모용이며 운영용 OIDC·사용자별 권한·비밀 회전은 추가해야 합니다. 메모리는 시간 조회에 불필요하므로 사용하지 않습니다. 전체 플랫폼 기능 완료를 뜻하지 않습니다.
 
 ## 검증
 
