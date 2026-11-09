@@ -38,6 +38,8 @@ python3 examples/enterprise-ai-web/server.py --offline
 
 다른 개발자나 도구에 구현을 맡길 때는 [변경 작업 지시서 만들기](specs/developer-handoff/README.md)로 요구·합격 조건·코드 위치를 정리할 수 있습니다. 별도 프로젝트 루트를 지정해 반환된 구현의 테스트도 실행하고, 원래 요청·변경 파일·테스트 상태를 검토 보고서로 모을 수 있습니다.
 
+검증한 출장비 앱을 다른 사람이 실행하도록 전달하려면 [로컬 실행 ZIP 만들기](specs/offline-package/README.md)를 참고하세요.
+
 코드를 수정하거나 기여하려면 [로컬 검사와 자동 검증 안내](CONTRIBUTING.md)를 참고하세요.
 
 ## 어떤 문제를 해결하려고 하나요
