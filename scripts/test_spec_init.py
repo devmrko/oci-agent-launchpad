@@ -76,3 +76,25 @@ class StarterTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.create()
         self.assertFalse((self.root / "missing").exists())
+
+    def test_delivery_is_optional_and_does_not_add_requirements(self):
+        self.create()
+        self.assertNotIn("제공 형태 메모", (self.root / "feature/spec.md").read_text())
+
+    def test_freeform_delivery_notes_preserve_requirements_and_tasks(self):
+        self.create(delivery=["API와 웹 화면을 함께 제공", "야간 파일 처리 배치도 검토"])
+        spec = (self.root / "feature/spec.md").read_text()
+        self.assertIn("API와 웹 화면을 함께 제공", spec)
+        self.assertIn("야간 파일 처리 배치도 검토", spec)
+        data = json.loads((self.root / "feature/traceability.json").read_text())
+        self.assertEqual(len(data["requirements"]), 1)
+        self.assertNotIn("야간 파일", (self.root / "feature/tasks.md").read_text())
+        self.create(output="plain")
+        for name in ("design.md", "tasks.md", "traceability.json"):
+            self.assertEqual((self.root / "plain" / name).read_bytes(), (self.root / "feature" / name).read_bytes())
+
+    def test_invalid_delivery_is_rejected_before_writing(self):
+        for value in ([""], ["line\n## REQ-999"], "api", ["api"] * 101):
+            with self.assertRaises(ValueError):
+                self.create(delivery=value)
+            self.assertFalse((self.root / "feature").exists())

@@ -14,8 +14,13 @@ def line(value):
     return value
 
 
-def initialize(root, output, title, purpose, requirements):
+def initialize(root, output, title, purpose, requirements, delivery=None):
     title, purpose = line(title), line(purpose)
+    if delivery is None:
+        delivery = []
+    if not isinstance(delivery, list) or len(delivery) > 100:
+        raise ValueError("Provide at most 100 delivery notes")
+    delivery = [line(item) for item in delivery]
     if not isinstance(requirements, list) or not 1 <= len(requirements) <= 100:
         raise ValueError("Provide 1 to 100 requirements")
     requirements = [line(item) for item in requirements]
@@ -29,6 +34,9 @@ def initialize(root, output, title, purpose, requirements):
     records = [{"id": f"REQ-{index:03}", "implementation": [], "tests": []}
                for index in range(1, len(requirements) + 1)]
     spec = f"# {title}\n\n{purpose}\n\n상태: 초안. 요구 검토·합격 조건 작성·구현·테스트는 미완료입니다.\n"
+    if delivery:
+        spec += "\n## 제공 형태 메모 (선택)\n\n필요에 따라 바꿀 수 있는 참고 메모입니다. 구현·검증 완료를 뜻하지 않습니다.\n\n"
+        spec += "".join(f"- {item}\n" for item in delivery)
     for record, requirement in zip(records, requirements):
         spec += f"\n## {record['id']}\n\n{requirement}\n\n합격 조건: 미작성 — 입력, 기대 결과, 실패 조건을 구체적으로 작성하세요.\n"
     design = f"# {title} 설계 초안\n\n목적: {purpose}\n\n구현 전에 아래 항목을 작성하고 요구와 연결하세요.\n\n"
@@ -56,9 +64,10 @@ def main():
     parser.add_argument("--title", required=True)
     parser.add_argument("--purpose", required=True)
     parser.add_argument("--requirement", action="append", required=True)
+    parser.add_argument("--delivery", action="append", help="Optional free-text delivery note; repeatable, no fixed categories")
     args = parser.parse_args()
     try:
-        result = initialize(Path(__file__).resolve().parents[1], args.output, args.title, args.purpose, args.requirement)
+        result = initialize(Path(__file__).resolve().parents[1], args.output, args.title, args.purpose, args.requirement, args.delivery)
     except (OSError, ValueError, TypeError):
         parser.exit(1, "Cannot create draft: check single-line inputs and a new repository-local output directory.\n")
     print(json.dumps(result, ensure_ascii=False, indent=2))
