@@ -14,6 +14,8 @@ SDD는 요구 명세를 기준으로 설계·구현·테스트와 변경을 이�
 
 첫 사례인 [출장비 SDD 예제](specs/travel-allowance/README.md)는 기존 앱에 명세를 연결하고 **OCI 계정 없이 실행하는 규정 계산**을 추가했습니다. 요구 5개와 코드·테스트 연결, 로컬 실행을 확인했습니다. 인터뷰에서 자동 생성하는 전체 흐름과 이 앱의 OCI 배포 증거 연결은 후속 단계입니다.
 
+[인터뷰 근거 연결 도구](specs/interview-handoff/README.md)는 JSON 답변을 요구 초안으로 옮기고 원문·검토 기록을 연결합니다. 미정 답변은 유지하며, 요구나 인터뷰가 바뀌면 재검토로 표시합니다. 초안을 자동으로 고객 확정 요구로 승격하거나 코드를 변경하지 않습니다.
+
 ```sh
 # Python 3.12 이상. 패키지 설치·OCI 계정 없이 실행합니다.
 python3 examples/enterprise-ai-web/server.py --offline

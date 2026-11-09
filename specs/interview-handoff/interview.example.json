@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "synthetic-travel-interview",
+  "revision": 1,
+  "name": "합성 출장비 인터뷰",
+  "intent": "계정 없이 가상 출장비 규정을 계산하고 필요하면 AI 설명을 추가합니다.",
+  "questions": [
+    {"id": "q-1", "text": "어떤 계산이 필요한가요?"},
+    {"id": "q-2", "text": "OCI 계정이 없는 사용자는 어떻게 시작하나요?"},
+    {"id": "q-3", "text": "운영 배포 위치와 담당자는 정해졌나요?"}
+  ],
+  "answers": [
+    {"id": "a-1", "questionId": "q-1", "text": "숙박 1~10박을 입력하면 1박당 10만 원으로 한도를 계산합니다.", "status": "answered", "supersedes": null},
+    {"id": "a-2", "questionId": "q-2", "text": "기본 규정 계산은 OCI 계정 없이 실행하고 AI 설명은 선택합니다.", "status": "answered", "supersedes": null},
+    {"id": "a-3", "questionId": "q-3", "text": "운영 배포 위치와 담당자는 미정입니다.", "status": "deferred", "supersedes": null}
+  ]
+}
