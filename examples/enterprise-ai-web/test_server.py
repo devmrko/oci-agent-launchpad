@@ -2,7 +2,33 @@ import http.client
 import json
 import threading
 import unittest
-from server import Server, validate
+from types import SimpleNamespace as Item
+from server import Server, assess
+
+
+class ResultTests(unittest.TestCase):
+    def result(self, output="200000\n", status="completed", answer="20만 원"):
+        response = Item(status="completed", output_text=answer)
+        calls = [Item(status=status, outputs=[Item(type="logs", logs=output)])]
+        return assess(response, calls, 200000, True)
+
+    def test_wrong_calculation_is_not_verified(self):
+        result = self.result("300000\n")
+        self.assertTrue(result["tool_verified"])
+        self.assertFalse(result["calculation_verified"])
+        self.assertEqual(result["verification"], "calculation_mismatch")
+
+    def test_empty_answer_and_failed_tool_do_not_pass(self):
+        self.assertEqual(self.result(answer=" ")["verification"], "incomplete_answer")
+        self.assertEqual(self.result(status="failed")["verification"], "missing_tool_output")
+
+    def test_correct_output_matches(self):
+        self.assertEqual(self.result()["verification"], "calculation_verified")
+
+    def test_plain_answer_does_not_claim_tool_verification(self):
+        result = assess(Item(status="completed", output_text="20만 원"), [], 200000, False)
+        self.assertEqual(result["verification"], "answer_received")
+        self.assertFalse(result["calculation_verified"])
 
 
 class BoundaryTests(unittest.TestCase):

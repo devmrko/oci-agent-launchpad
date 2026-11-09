@@ -6,6 +6,33 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import secrets
 import threading
+import sys
+
+
+def preflight():
+    """Local checks only: no model invocation and no resource creation."""
+    from importlib.metadata import PackageNotFoundError, version
+    failures = []
+    if sys.version_info < (3, 12):
+        failures.append("Python 3.12 이상으로 실행해 주세요.")
+    for package in ("openai", "oci-genai-auth", "httpx"):
+        try:
+            print(f"{package}: {version(package)}")
+        except PackageNotFoundError:
+            failures.append(f"{package} 미설치: bash examples/enterprise-ai-web/setup.sh를 실행하세요.")
+    try:
+        import oci
+        config = oci.config.from_file()
+        oci.config.validate_config(config)
+        if not Path(config.get("key_file", "")).expanduser().is_file():
+            failures.append("OCI DEFAULT 프로필의 서명 키 파일을 찾지 못했습니다.")
+    except Exception:
+        failures.append("~/.oci/config DEFAULT 프로필과 OCI 서명 키 설정을 확인하세요.")
+    for failure in failures:
+        print(f"확인 필요: {failure}")
+    if not failures:
+        print("로컬 준비 점검 통과. OCI 권한·프로젝트 ACTIVE 상태·모델 지원은 실제 호출에서 확인합니다.")
+    return not failures
 
 
 def validate(value):
@@ -18,6 +45,27 @@ def validate(value):
     return value
 
 
+def assess(response, calls, expected, use_tool):
+    """An API completion is separate from a verified calculation."""
+    answer_complete = response.status == "completed" and bool(response.output_text.strip())
+    executed = any(c.status == "completed" and c.outputs for c in calls)
+    matched = any(
+        c.status == "completed" and any(
+            o.type == "logs" and o.logs.strip() == str(expected) for o in c.outputs or []
+        ) for c in calls
+    )
+    if not answer_complete:
+        status = "incomplete_answer"
+    elif use_tool and not executed:
+        status = "missing_tool_output"
+    elif use_tool and not matched:
+        status = "calculation_mismatch"
+    else:
+        status = "calculation_verified" if use_tool else "answer_received"
+    return {"completed": answer_complete, "tool_verified": bool(executed),
+            "calculation_verified": matched, "verification": status}
+
+
 def invoke(project, region, value):
     import httpx
     from oci_genai_auth import OciUserPrincipalAuth
@@ -27,7 +75,7 @@ def invoke(project, region, value):
         options = dict(
             tools=[{"type": "code_interpreter", "container": {"type": "auto", "memory_limit": "1g"}}],
             tool_choice="required", include=["code_interpreter_call.outputs"],
-            instructions="Use the python tool to calculate the answer. Explain briefly in Korean.",
+            instructions="Use the python tool. Print only the integer total without labels or separators. Then explain briefly in Korean.",
         )
     with OpenAI(
         base_url=f"https://inference.generativeai.{region}.oci.oraclecloud.com/openai/v1",
@@ -36,9 +84,9 @@ def invoke(project, region, value):
             config_file=str(Path.home() / ".oci/config"), profile_name="DEFAULT")),
     ) as client:
         response = client.responses.create(
-            model="google.gemini-2.5-flash", store=False, max_output_tokens=512,
+            model="google.gemini-2.5-flash", store=False, max_output_tokens=1024,
             input=("가상 출장 규정: 국내 숙박비는 1박당 최대 100,000원입니다. "
-                   f"식비와 교통비를 제외하고 {value['nights']}박의 숙박비 한도와 계산식을 한국어로 설명하세요."),
+                   f"식비와 교통비를 제외하고 {value['nights']}박의 숙박비 한도와 계산식을 한국어 한 문장으로만 답하세요. 제목이나 추가 설명은 쓰지 마세요."),
             **options,
         )
         calls = [item for item in response.output if item.type == "code_interpreter_call"]
@@ -52,11 +100,10 @@ def invoke(project, region, value):
                 print("Container cleanup required:", container, flush=True)
         return {
             "answer": response.output_text,
-            "completed": response.status == "completed" and bool(response.output_text),
+            **assess(response, calls, value["nights"] * 100000, value["use_tool"]),
             "model": response.model, "region": region,
             "tokens": response.usage.total_tokens if response.usage else None,
             "expected": value["nights"] * 100000,
-            "tool_verified": any(c.status == "completed" and c.outputs for c in calls),
             "calls": [{"code": c.code, "outputs": [o.model_dump() for o in c.outputs or []]} for c in calls],
             "cleanup": cleanup,
         }
@@ -106,7 +153,7 @@ class Handler(BaseHTTPRequestHandler):
         self.connection.settimeout(10)
         expected_origin = f"http://127.0.0.1:{self.server.server_port}"
         if (not self.correct_host() or self.headers.get("Origin") != expected_origin
-                or not hmac.compare_digest(self.headers.get("X-Demo-Token", ""), self.server.token)):
+                or not hmac.compare_digest(self.headers.get("X-Demo-Token", "").encode(), self.server.token.encode())):
             return self.send(403, {"error": "로컬 체험 화면에서 다시 시도해 주세요."})
         if self.path != "/api/run":
             return self.send(404, {"error": "없는 경로입니다."})
@@ -136,10 +183,17 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--project", required=True)
-    parser.add_argument("--region", required=True)
+    parser.add_argument("--project")
+    parser.add_argument("--region")
+    parser.add_argument("--check", action="store_true", help="로컬 준비만 확인하며 OCI를 호출하지 않습니다")
     parser.add_argument("--port", type=int, default=8768)
     args = parser.parse_args()
+    if args.check:
+        raise SystemExit(0 if preflight() else 1)
+    if not args.project or not args.region:
+        parser.error("--project와 --region을 지정해 주세요. 처음이면 --check로 준비 상태를 확인하세요.")
+    if not preflight():
+        raise SystemExit(1)
     with Server(args.port, args.project, args.region) as server:
         print(f"Local demo: http://127.0.0.1:{server.server_port}", flush=True)
         try:
