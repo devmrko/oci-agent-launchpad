@@ -52,10 +52,13 @@ def probe():
 
 
 def main():
+    output = os.environ.get('HELLO_PROBE_OUTPUT', 'object-storage')
+    if output not in ('object-storage', 'stdout'): raise ValueError('Unsupported probe output')
     result = probe()
-    signer = oci.auth.signers.get_oke_workload_identity_resource_principal_signer()
-    storage = oci.object_storage.ObjectStorageClient({'region': os.environ['OCI_REGION']}, signer=signer)
-    storage.put_object(os.environ['RESULT_NAMESPACE'], os.environ['RESULT_BUCKET'], os.environ['RESULT_OBJECT'], json.dumps(result, ensure_ascii=False).encode(), content_type='application/json')
+    if output == 'object-storage':
+        signer = oci.auth.signers.get_oke_workload_identity_resource_principal_signer()
+        storage = oci.object_storage.ObjectStorageClient({'region': os.environ['OCI_REGION']}, signer=signer)
+        storage.put_object(os.environ['RESULT_NAMESPACE'], os.environ['RESULT_BUCKET'], os.environ['RESULT_OBJECT'], json.dumps(result, ensure_ascii=False).encode(), content_type='application/json')
     print(json.dumps(result, ensure_ascii=False), flush=True)
     if result['status'] != 'PASS': raise SystemExit(1)
 

@@ -30,3 +30,21 @@ def test_cloud_probe_uses_v4_observations_with_io(tmp_path, monkeypatch):
     assert result['status'] == 'PASS'
     assert result['browser_verified'] is False
     assert all(result['checks'].values())
+
+
+def test_stdout_probe_needs_no_object_storage_identity(monkeypatch, capsys):
+    monkeypatch.setenv('HELLO_PROBE_OUTPUT', 'stdout')
+    monkeypatch.setattr(m, 'probe', lambda: {'status': 'PASS'})
+    def forbidden(): raise AssertionError('Storage signer must not be used')
+    monkeypatch.setattr(m.oci.auth.signers, 'get_oke_workload_identity_resource_principal_signer', forbidden)
+    m.main()
+    assert json.loads(capsys.readouterr().out) == {'status': 'PASS'}
+
+
+def test_failed_probe_exits_nonzero(monkeypatch, capsys):
+    import pytest
+    monkeypatch.setenv('HELLO_PROBE_OUTPUT', 'stdout')
+    monkeypatch.setattr(m, 'probe', lambda: {'status': 'FAILED'})
+    with pytest.raises(SystemExit) as error: m.main()
+    assert error.value.code == 1
+    assert json.loads(capsys.readouterr().out)['status'] == 'FAILED'

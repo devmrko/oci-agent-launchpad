@@ -1,0 +1,72 @@
+{
+  "status": "PASS",
+  "execution_location": "OKE",
+  "browser_verified": false,
+  "checks": {
+    "health": true,
+    "authentication": true,
+    "model_and_tool": true,
+    "telemetry_export": true,
+    "langfuse_input_output": true
+  },
+  "health": {
+    "status": "UP",
+    "version": "0.1.0",
+    "agent_id": "hello-agent"
+  },
+  "chat_http_status": 200,
+  "chat": {
+    "answer": "서울의 현재 시간은 2026-11-09T15:23:26+09:00입니다.",
+    "decision": {
+      "tool": "get_time",
+      "arguments": {
+        "city": "서울"
+      }
+    },
+    "tool_result": {
+      "city": "서울",
+      "timezone": "Asia/Seoul",
+      "time": "2026-11-09T15:23:26+09:00"
+    },
+    "trace_id": "89b30c83950cdd54285b69920a580c69",
+    "version": "0.1.0",
+    "mode": "oci",
+    "telemetry": "exported"
+  },
+  "langfuse_http_status": 200,
+  "trace": {
+    "id": "89b30c83950cdd54285b69920a580c69",
+    "observations": [
+      {
+        "name": "get_time",
+        "type": "TOOL",
+        "input_present": true,
+        "output_present": true
+      },
+      {
+        "name": "oci.model",
+        "type": "GENERATION",
+        "input_present": true,
+        "output_present": true
+      },
+      {
+        "name": "hello-agent.chat",
+        "type": "AGENT",
+        "input_present": true,
+        "output_present": true
+      }
+    ]
+  },
+  "observed_at_unix": 1794205411,
+  "delivery": {
+    "trigger": "OCI Companion web",
+    "oci_deployment_state": "SUCCEEDED",
+    "deployment_id": "ocid1.devopsdeployment.oc1.ap-seoul-1.amaaaaaavsea7yiaww64alvkppyyrp4bch23qyp5nuqqr4dty4fdwrd2jz3a",
+    "job_name": "hello-validation-012",
+    "job_uid": "9ade3bc7-1429-44e0-8948-0c2c4ee7dbb3",
+    "job_completed": true,
+    "additional_iam": false,
+    "companion_result_collection": "not_implemented",
+    "probe_sha256": "1080d8fb51b24da10d92c0cf549a8c982ec725559d82171776a3dfa24018149c"
+  }
+}

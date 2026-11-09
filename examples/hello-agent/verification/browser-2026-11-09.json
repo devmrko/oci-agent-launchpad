@@ -1,0 +1,35 @@
+{
+  "browser_verified": true,
+  "execution_location": "OKE",
+  "trace_id": "db02cedcc30d15f20fb1f59d6557c80b",
+  "langfuse_input_output": true,
+  "observations": [
+    {
+      "name": "get_time",
+      "type": "TOOL",
+      "input_present": true,
+      "output_present": true
+    },
+    {
+      "name": "oci.model",
+      "type": "GENERATION",
+      "input_present": true,
+      "output_present": true
+    },
+    {
+      "name": "hello-agent.chat",
+      "type": "AGENT",
+      "input_present": true,
+      "output_present": true
+    }
+  ],
+  "companion": {
+    "app_id": "f28a8e0c-aab9-446d-941c-64c6ca85f534",
+    "health": "UP",
+    "version": "0.1.0",
+    "pods_ready": 1,
+    "pod_restarts": 0,
+    "node_ready": true
+  },
+  "observed_at": "2026-11-09T06:17:58.075176+00:00"
+}

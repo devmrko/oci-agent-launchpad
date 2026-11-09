@@ -1,6 +1,6 @@
 # 에이전트 Hello World
 
-**최종 목표는 Companion 빌드 → OCI 배포 → 실제 모델·도구 실행 → Langfuse 관측입니다. Functions 빌드·컨테이너 등록·Companion OKE 배포와 OKE 내부 실제 모델·도구 호출을 확인했습니다. Langfuse의 모델·도구·응답 입출력 조회도 통과했습니다. 브라우저 접속 경로와 Companion 앱 등록은 남아 있습니다.** [완주 조건과 현재 공백](DELIVERY.md)을 기준으로 진행합니다.
+**최종 목표는 Companion 빌드 → OCI 배포 → 실제 모델·도구 실행 → Langfuse 관측입니다. Functions 빌드·컨테이너 등록·Companion OKE 배포와 OKE 내부 실제 모델·도구 호출을 확인했습니다. Langfuse의 모델·도구·응답 입출력 조회도 통과했습니다. 브라우저 인증 호출과 Companion 독립 앱 등록·OKE Pod/노드 상태 조회도 확인했습니다.** [완주 조건과 현재 공백](DELIVERY.md)을 기준으로 진행합니다.
 
 “지금 서울 몇 시인가요?”라는 질문으로 에이전트의 최소 동작을 확인합니다.
 
@@ -60,9 +60,9 @@ export HELLO_OCI_PROFILE='DEFAULT'
 | Runtime | 독립 웹/API·OKE 컨테이너, 로컬 CLI | 고객 내부 접속·운영 배포 자동화 |
 | 모델 | OCI SDK 명시 호출 / 데모 분리 | Foundation 공통 모델 어댑터 선택 검토 |
 | 도구·정책 | allowlist·엄격한 인자 검사 | Gateway·Identity·업무 승인 |
-| 관측 | 모델·도구·응답 OTLP 전송 | Langfuse 조회 검증, 실패 추적·재전송 |
+| 관측 | OTLP 전송과 Langfuse 모델·도구·응답 입출력 조회 검증 | 실패 추적·재전송 |
 | Memory | 불필요하므로 없음 | 기억할 업무 요구가 생기면 Oracle Agent Memory |
-| Companion | Functions 빌드·이미지 빌드·OKE 배포 실행 | 앱 등록·네트워크 접속, Job 검증 단계 지원 |
+| Companion | Functions 빌드·이미지 빌드·OKE 배포·독립 앱 등록·Pod/노드 조회 | 검증 결과 자동 수집·고객 환경 설치 재현 |
 
 Service Desk 앱 코드를 의존하지 않는 독립 패키지입니다. Python Foundation 인증 모듈과 웹 GUI를 사용합니다. 현재 접근 토큰은 합성 데모용이며 운영용 OIDC·사용자별 권한·비밀 회전은 추가해야 합니다. 메모리는 시간 조회에 불필요하므로 사용하지 않습니다. 전체 플랫폼 기능 완료를 뜻하지 않습니다.
 
