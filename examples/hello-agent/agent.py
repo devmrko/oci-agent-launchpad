@@ -51,7 +51,10 @@ def execute(decision):
 
 def demo_decision(message):
     # A scripted teaching path, not an LLM. Always labelled demo in output.
-    if message.strip() in {"지원 도시", "도시 목록", "어떤 도시를 지원하나요?"}:
+    if message.strip().casefold() in {
+        "지원 도시", "도시 목록", "어떤 도시를 지원하나요?",
+        "list cities", "supported cities",
+    }:
         return json.dumps({"tool": "list_cities", "arguments": {}})
     for city in ZONES:
         if city in message and any(word in message for word in ("시간", "몇 시", "몇시")):

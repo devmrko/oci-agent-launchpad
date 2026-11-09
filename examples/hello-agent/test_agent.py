@@ -53,6 +53,38 @@ class HelloTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 execute({"tool": "list_cities", "arguments": arguments})
 
+    def test_english_city_list_in_demo(self):
+        for message in (
+            "list cities", "LIST CITIES", "LiSt CiTiEs", "  list cities  ",
+            "supported cities", "SUPPORTED CITIES", "  Supported Cities  ",
+            "\tSupported Cities\n", "\t지원 도시\n", "  도시 목록  ",
+            "  어떤 도시를 지원하나요?  ",
+        ):
+            with self.subTest(message=message):
+                result = run(message, demo_decision, "demo")
+                self.assertFalse(result["model_used"])
+                self.assertEqual(result["decision"], {"tool": "list_cities", "arguments": {}})
+                self.assertEqual(result["tool_result"]["cities"], [
+                    {"city": "서울", "timezone": "Asia/Seoul"},
+                    {"city": "도쿄", "timezone": "Asia/Tokyo"},
+                    {"city": "런던", "timezone": "Europe/London"},
+                ])
+                self.assertEqual(result["answer"], result["tool_result"]["message"])
+                for item in result["tool_result"]["cities"]:
+                    self.assertIn(item["city"], result["answer"])
+                    self.assertIn(item["timezone"], result["answer"])
+
+    def test_city_list_requires_exact_match(self):
+        for message in (
+            "list cities now", "  LIST CITIES NOW  ", "please list cities",
+            "supported cities now", "unsupported cities", "list cities!",
+            "list  cities", "supported\tcities", "run arbitrary command",
+        ):
+            with self.subTest(message=message):
+                result = run(message, demo_decision, "demo")
+                self.assertFalse(result["model_used"])
+                self.assertEqual(result["decision"], {"tool": "unsupported", "arguments": {}})
+
     def test_input_bounds(self):
         for message in ["", " " * 3, "x" * 1001]:
             with self.assertRaises(ValueError):

@@ -17,3 +17,7 @@
 ## REQ-004 지원 도시 목록
 
 데모에서 “지원 도시”, “도시 목록”, “어떤 도시를 지원하나요?” 요청은 인자 없는 list_cities 도구로 처리합니다. 서울/Asia/Seoul, 도쿄/Asia/Tokyo, 런던/Europe/London을 반환하고 답변은 이 결과를 사용합니다. 추가 인자는 거부합니다. 데모는 모델 호출 없이 model_used=false를 유지합니다. 자연어 표현 전반이나 실제 OCI 모델의 선택 정확성을 보장하는 것은 아닙니다.
+
+영문 “list cities”, “supported cities”도 지원합니다. 도시 목록 비교 전에 양끝 공백(탭·개행 포함)을 제거하고 대소문자를 무시한 전체 일치를 사용합니다. 내부 공백은 변경하지 않습니다. “list cities now”, “please list cities”, “unsupported cities”, 임의 명령은 unsupported로 유지합니다. 기존 한국어 표현과 시간·인사·입력 검증은 유지합니다.
+
+검증: `HelloTests.test_english_city_list_in_demo`에서 영문·대소문자·양끝 공백 및 한국어 공백 변형의 도시·시간대·결과 기반 답변과 모델 미사용을 확인합니다. `HelloTests.test_city_list_requires_exact_match`에서 부분 일치·내부 공백 변경·임의 명령 거부를 확인합니다. 기존 한국어 목록과 추가 인자 거부 테스트도 유지하며 연결은 `traceability.json`에 기록합니다.

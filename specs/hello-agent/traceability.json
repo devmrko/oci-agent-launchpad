@@ -62,6 +62,14 @@
         {
           "path": "examples/hello-agent/test_agent.py",
           "case": "HelloTests.test_city_list_rejects_extra_arguments"
+        },
+        {
+          "path": "examples/hello-agent/test_agent.py",
+          "case": "HelloTests.test_english_city_list_in_demo"
+        },
+        {
+          "path": "examples/hello-agent/test_agent.py",
+          "case": "HelloTests.test_city_list_requires_exact_match"
         }
       ]
     }
