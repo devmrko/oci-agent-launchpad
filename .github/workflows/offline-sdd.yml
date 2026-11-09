@@ -1,0 +1,43 @@
+name: Offline SDD checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: offline-sdd-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline:
+    name: Offline examples (${{ matrix.os }}, Python 3.12)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Test web and CLI examples
+        run: python -S -m unittest discover -s examples/enterprise-ai-web -p 'test_*.py'
+      - name: Test SDD tools
+        run: python -S -m unittest discover -s scripts -p 'test_*.py'
+      - name: Check specification links
+        run: python -S scripts/check_spec_links.py specs/travel-allowance
+      - name: Reproduce the synthetic walkthrough
+        run: |
+          mkdir -p .run
+          python -S scripts/sdd_demo.py --output .run/ci-sdd-demo
