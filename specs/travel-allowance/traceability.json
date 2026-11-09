@@ -30,6 +30,10 @@
         {
           "path": "examples/enterprise-ai-web/test_server.py",
           "case": "BoundaryTests.test_offline_estimate_never_calls_model"
+        },
+        {
+          "path": "examples/enterprise-ai-web/test_server.py",
+          "case": "LocalBindingTests.test_server_starts_without_name_lookup"
         }
       ]
     },

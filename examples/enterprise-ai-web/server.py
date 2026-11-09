@@ -5,6 +5,7 @@ import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import secrets
+from socketserver import TCPServer
 import threading
 import sys
 from allowance import estimate
@@ -111,6 +112,11 @@ def invoke(project, region, value):
 
 class Server(ThreadingHTTPServer):
     daemon_threads = False
+
+    def server_bind(self):
+        # This local-only server does not need reverse DNS for its own address.
+        TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
 
     def __init__(self, port, project=None, region=None, runner=None, offline=False):
         super().__init__(("127.0.0.1", port), Handler)

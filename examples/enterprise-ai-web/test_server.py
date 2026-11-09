@@ -2,6 +2,7 @@ import http.client
 import json
 import threading
 import unittest
+from unittest.mock import patch
 from types import SimpleNamespace as Item
 from server import Server, assess, estimate
 
@@ -112,6 +113,16 @@ class BoundaryTests(unittest.TestCase):
         self.assertEqual(status, 502)
         self.assertNotIn(b"private-provider-detail", body)
         self.assertEqual(self.server.remaining, 9)
+
+
+class LocalBindingTests(unittest.TestCase):
+    def test_server_starts_without_name_lookup(self):
+        with patch("socket.getfqdn", side_effect=AssertionError("Unexpected name lookup")) as lookup:
+            with Server(0, offline=True) as server:
+                self.assertEqual(server.server_address[0], "127.0.0.1")
+                self.assertEqual(server.server_name, "127.0.0.1")
+                self.assertGreater(server.server_port, 0)
+            lookup.assert_not_called()
 
 
 if __name__ == "__main__":

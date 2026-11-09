@@ -12,7 +12,8 @@ class WalkthroughTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "demo"
             result = run_demo(root, output)
-            self.assertEqual(result["status"], "DEMO_PASS")
+            self.assertEqual(result["status"], "DEMO_PASS",
+                             (output / "workspace/test-evidence.json").read_text())
             self.assertFalse(result["human_approval"])
             self.assertEqual(result["draft"]["unresolved"], 1)
             self.assertEqual(result["initial"]["review"]["requirements"][1]["status"], "DRAFT")
