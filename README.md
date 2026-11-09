@@ -1,26 +1,121 @@
 # OCI Agent Launchpad
 
-고객의 아이디어를 OCI에서 운영하는 AI 에이전트로 연결하기 위한 프로젝트입니다.
+**고객의 업무 아이디어를 실제로 실행되는 AI 에이전트로 만들고, Oracle Cloud Infrastructure(OCI)에 배포해 운영팀에 넘기기 위한 예제·배포 도구·설계 자료 모음입니다.** 고객과 함께 개발하는 엔지니어, AI 앱 개발자, OCI 운영 담당자를 대상으로 합니다.
 
-고객의 업무 문제를 출발점으로 AI 에이전트를 함께 만들고 OCI 배포와 상용 운영으로 연결하기 위한 기획 자료입니다. 대상 독자는 현장 Customer Engineer(CE), 아키텍트, 플랫폼 담당자와 프로그램 책임자입니다.
+AI에게 답변을 받는 데서 출발해 **업무 도구 실행 → 권한과 승인 확인 → 기억 저장 → 배포 → 실행 기록 확인**까지 연결하는 것이 목표입니다. 업무마다 필요한 기능을 선택하고, 검증한 코드·환경 설정·운영 전 보완 목록을 함께 전달합니다.
 
-현재는 **방법론과 동작하는 파일럿** 단계입니다. Python Foundation 예제를 서울 OCI VM에 배포하고 실제 모델 호출, 승인 후 업무 처리, Oracle Agent Memory 저장·검색을 검증했습니다. 기존 VM의 Companion·DevOps 릴리스 배포·복구와 별도 새 VM의 Vault 기반 설치·재부팅 보존까지 확인했습니다. 새 VM 부팅 검증에는 수정본 관리자 배치가 포함됐으며, 전체 AgentCore 기능 동등성이나 운영 준비 완료를 의미하지 않습니다.
+현재는 **엔지니어 동행형 알파**입니다. 준비된 환경에서 모델·도구 실행, VM·OKE 배포, 기억 저장·검색, 실행 추적을 확인했습니다. 새 고객 환경에 한 번에 설치하는 완성 제품이나 운영 서비스는 아직 아닙니다. [알파 제공 범위](ALPHA.md)
 
-AgentCore 대응 플랫폼과 OCI Companion은 독립 프로젝트입니다. 플랫폼은 Companion 없이도 사용할 수 있어야 하며, Companion은 구축·빌드·배포·모니터링을 돕습니다. 실제 플랫폼을 구축하면서 발견한 Companion의 부족한 기능은 해당 프로젝트에 구현합니다.
+## 어떤 문제를 해결하려고 하나요
 
-- [고정 소스 빌드 절차](deploy/BUILD.md): 독립 CLI, OCI 입력 스냅샷과 빌드 설정입니다.
-- [현재 진척도와 다음 완료 기준](docs/status.md)
-- [독립 플랫폼과 Companion 연동 범위](docs/companion-agent-platform-review.md): 현재 동작, 관리 화면과 실행 서비스의 책임, 빌드 연결 우선순위입니다.
-- [OCI 배포 결과와 접속 절차](deploy/README.md): 새 VM, 원격 검증, Companion 연동 상태입니다.
-- [새 VM 첫 실행과 Vault 연결](deploy/bootstrap-runtime.md): 변수, 설치 흐름, 실제 검증 범위와 운영 제약입니다.
-- [첫 예제 실행](examples/service-desk/README.md): 규정 조회, 승인 후 접수, 기억과 실행 추적을 확인합니다.
-- [상세 고객 양식](templates/use-case.md): 필수·옵션·조건부 입력과 요구·설계·배포·검증 표를 제공합니다.
+예를 들어 고객이 “직원이 사내 규정을 물어보고, 필요하면 지원 요청까지 접수하는 AI를 만들고 싶다”고 요청할 수 있습니다. 이때 모델 연결 외에도 규정 조회, 사용자 인증, 접수 승인, 데이터 저장, 배포, 장애 원인 확인이 필요합니다.
 
-- [OCI Companion과 Python Foundation 연계 계획](docs/companion-integration-plan.md): 기존 기반을 사용해 앱을 만들고 Companion에서 배포·모니터링하는 목표 흐름입니다.
-- [템플릿 요구사항](docs/template-requirements.md): AI-DLC 근거, 상세 템플릿, 필수·옵션 구분과 일반적인 활용 예제에 대한 사용자 요구입니다.
-- [고객 공동 개발 프로그램과 파일럿 실행 계획](docs/oci-ai-dlc-plan.md): 녹취에서 도출한 방향, AI-DLC 적용, 고객 준비, 3일 워크숍, 운영 전환과 성과 측정입니다.
-- [AgentCore 기능을 OCI에서 대체하는 구성 계획](docs/oci-agent-platform-plan.md): 기능별 대체안, 최소 구성과 운영 확장 구성, 직접 구현할 부분과 검증 과제입니다.
+이 프로젝트는 그 작업을 작은 실행 예제로 나누고 OCI 구성과 연결합니다.
 
-먼저 템플릿 요구사항을 기준으로 AI-DLC 원문과 워크플로의 대응 관계, 상세 양식과 예제 구성을 설계합니다. 프로그램 계획과 대체 구성 계획은 고객 적용 및 OCI 운영을 위한 검토안으로 함께 사용합니다. 기술 선택은 대상 리전과 테넌시의 실제 사용 가능 여부를 확인한 뒤 확정합니다.
+| 고객이 원하는 일 | 이 프로젝트에서 보여주는 방법 |
+|---|---|
+| 회사 규정을 찾아 안내하기 | Service Desk가 합성 규정에서 근거를 찾아 응답합니다 |
+| 업무를 실제로 처리하기 | 요청 초안을 보여주고 사용자가 승인하면 접수합니다. 서버에서 사용자 소유권과 중복 실행을 검사합니다 |
+| 다음 대화에도 필요한 정보 유지하기 | Oracle Agent Memory와 데이터베이스를 연결해 사용자가 명시적으로 저장한 기억을 검색합니다 |
+| 개발 PC 밖에서 실행하기 | 앱을 패키징하고 OCI VM 또는 OKE에 배포합니다 |
+| 어떤 단계에서 문제가 생겼는지 보기 | 모델·도구·답변 기록을 Langfuse에서, 앱·배포 상태를 Companion과 OCI에서 확인합니다 |
 
-작성 기준일: 2026-11-06. 사용자 제공 녹취, AWS AI-DLC 방법론과 공개 저장소, AWS 및 Oracle 공식 문서를 참고했습니다. 이 자료는 Oracle 또는 AWS의 공식 프로그램·제품 로드맵을 의미하지 않습니다.
+고객과의 진행 순서는 **업무 인터뷰 → 성공 조건 합의 → 작은 예제 구현 → 실제 실행 검증 → OCI 배포 → 운영 인수**입니다. AI-DLC는 이 공동 개발 과정을 정리하는 방법론입니다. [고객 입력 양식](templates/use-case.md) · [공동 개발 프로그램 계획](docs/oci-ai-dlc-plan.md)
+
+## 무엇을 조합했나요
+
+하나의 프로그램에 모든 기능을 넣기보다, 역할이 다른 서비스와 라이브러리를 연결합니다. 아래의 “사용”은 해당 예제에서의 적용 범위를 뜻하며 모든 예제가 모든 구성요소를 사용하는 것은 아닙니다.
+
+| 구성요소 | 맡는 역할과 선택 이유 | 현재 적용 범위 |
+|---|---|---|
+| **Launchpad — 이 저장소** | 업무 양식, 실행 예제, 배포 스크립트, Terraform, 검증·인수 문서를 묶어 같은 작업을 다시 수행할 수 있게 합니다 | 예제와 도구 제공. 고객별 전체 설치 자동화는 미완료 |
+| **Python Foundation** | 인증·웹·DB 등 앱에서 반복되는 코드를 재사용합니다 | Hello Agent와 Service Desk의 공통 기반. 별도 저장소·패키지 의존성 |
+| **OCI Generative AI** | 모델을 호출해 질문을 이해하고 필요한 동작을 선택합니다 | Hello Agent·Service Desk에서 실제 호출 검증 |
+| **OCI Enterprise AI 기능** | Responses API로 모델과 관리형 계산 도구를 함께 사용합니다 | 별도 로컬 체험에서 실제 Python 실행 검증. 기존 앱 전체를 이전한 것은 아님 |
+| **OCI Compute / OKE** | 개발한 앱을 실행합니다. Compute는 VM, OKE는 관리형 Kubernetes 환경입니다 | Service Desk VM·OKE와 Hello Agent OKE 실행 기록 |
+| **OCI Functions / DevOps / OCIR** | 소스 빌드, 컨테이너 이미지 패키징·저장, 대상 환경 배포를 연결합니다 | Hello Agent의 빌드·배포 경로 검증. OCIR은 OCI Container Registry |
+| **Terraform / OCI IAM / Vault** | 인프라를 코드로 구성하고, 자원 접근 권한과 비밀값을 관리합니다 | 인프라 모듈, workload 인증, Vault 기반 설치 경로. 운영 권한·회전은 추가 검증 필요 |
+| **Oracle Agent Memory / ADB** | 사용자가 저장한 기억을 세션이 끝난 뒤에도 보관하고 의미로 검색합니다. ADB는 Autonomous Database입니다 | Service Desk의 명시적 저장·검색·사용자 격리 검증. 일반 답변 개인화는 미완료 |
+| **Langfuse / OpenTelemetry** | 앱이 보낸 실행 기록으로 모델 입력·출력과 도구 결과를 함께 확인합니다 | Hello Agent와 Service Desk 추적 검증. 업무 품질 평가 운영은 후속 과제 |
+| **OCI Companion** | 엔지니어가 빌드·배포를 실행하고 등록 앱과 OCI 자원 상태를 확인하는 별도 관리 도구입니다 | 기본 알파의 제공 과정에 사용. 이미 배포된 앱은 Companion과 독립 실행 |
+
+Langfuse를 구성할 때 PostgreSQL은 관리 정보, ClickHouse는 관측 데이터 분석, Redis/Valkey는 큐·캐시, 객체 저장소는 이벤트·파일을 맡습니다. **이 저장소들은 사용자 기억을 보관하는 ADB와 용도가 다릅니다.** 실제 구성과 버전은 선택한 배포 환경을 기준으로 맞춥니다.
+
+**OCI API Gateway·Identity Domains, ContextForge, OPA는 추가 연결 후보입니다.** 각각 서비스 진입·사용자 인증, 중앙 도구 중계, 공통 정책 판단을 보완하려는 구성으로, 현재 기본 예제에 모두 설치·통합됐다는 뜻은 아닙니다. [기능별 구성 계획](docs/oci-agent-platform-plan.md)
+
+## 구성요소는 어떻게 연결되나요
+
+아래는 기본 알파의 Hello Agent 배포와 실행 흐름입니다. 모델은 Ashburn에서 호출하고 앱은 서울 OKE에서 실행한 검증 구성을 기준으로 합니다.
+
+```mermaid
+flowchart LR
+    E[개발자와 운영자] --> C[OCI Companion]
+    C --> B[Functions와 DevOps 빌드]
+    B --> R[OCIR 이미지 저장]
+    R --> K[서울 OKE의 에이전트 앱]
+    U[사용자 웹 요청] --> K
+    K --> M[OCI Generative AI 모델]
+    M --> K
+    K --> T[허용된 시간 조회 도구]
+    T --> K
+    K --> U
+    K -. 실행 기록 .-> L[Langfuse]
+    C -. 앱과 자원 상태 조회 .-> K
+```
+
+앱이 모델에 요청하고, 모델이 선택한 도구와 인자를 앱이 검사한 뒤 실행합니다. **실제 업무 권한과 승인은 서버 코드에서 확인합니다.** 모델의 답변 자체가 실행 권한이 되지는 않습니다. Companion은 이 요청마다 호출되는 서비스가 아니라 구축·배포·관리를 돕는 도구입니다.
+
+기억이 필요한 Service Desk에는 Oracle Agent Memory와 ADB를 추가합니다. 시간만 알려주는 Hello Agent에는 기억 DB가 필요하지 않습니다. 별도 Enterprise AI 체험은 로컬 Python 서버가 Responses API와 관리형 Code Interpreter를 호출하는 더 작은 구성입니다.
+
+## 세 가지 예제로 확인할 수 있습니다
+
+| 예제 | 무엇을 배울 수 있나요 | 사용하는 주요 요소 |
+|---|---|---|
+| [Hello Agent](examples/hello-agent/README.md) | “지금 서울 몇 시인가요?” → 모델이 도구 선택 → 서버 시계 조회 → 답변. 클라우드 빌드·배포·관측의 기본 예제입니다 | Python Foundation, OCI 모델, OKE, Companion, Langfuse |
+| [Service Desk](examples/service-desk/README.md) | 규정 안내 → 요청 초안 → 사용자 승인 → 접수. 사용자별 기억과 실행 통제로 확장합니다 | Python Foundation, 업무 DB, OCI 모델, Oracle Agent Memory·ADB, 추적 |
+| [Enterprise AI 로컬 체험](examples/enterprise-ai-web/README.md) | 가상 출장비를 질문하고, OCI가 Python을 실행한 코드·출력·최종 답변을 확인합니다 | Python 웹 서버, OpenAI Python SDK, OCI IAM 인증, Responses API, Code Interpreter |
+
+Enterprise AI 체험은 OpenAI SDK의 요청 형식을 사용하지만 **실제 요청 대상은 OCI**입니다. Foundation·Companion·OKE·ADB 없이 해당 관리형 기능만 체험할 수 있습니다. [Enterprise AI 쉬운 설명과 콘솔 위치](docs/oci-enterprise-ai-introduction.md)
+
+## 가장 작은 예제부터 실행하기
+
+**먼저 외부 계정 없이 흐름을 보려면** Python 3.12 이상에서 Hello Agent의 로컬 데모를 실행합니다.
+
+```sh
+git clone https://github.com/devmrko/oci-agent-launchpad.git
+cd oci-agent-launchpad
+python3 examples/hello-agent/agent.py --mode demo '지금 서울 몇 시인가요?'
+```
+
+결과의 `decision`에 `get_time`, `tool_result`에 실행 시점의 서울 시간이 표시됩니다. 이 모드는 규칙 기반 시연이며 `model_used: false`를 표시합니다. 실제 모델을 시험하려면 다음 단계로 진행합니다.
+
+**실제 OCI 모델과 계산 도구를 사용하려면** [로컬 웹 체험의 시작 안내](examples/enterprise-ai-web/README.md#시작하기)를 따릅니다. OCI 인증, ACTIVE 상태의 Generative AI 프로젝트, 모델 호출 권한이 필요하며 사용료가 발생할 수 있습니다. 화면은 로컬에만 열리고 모델 요청은 지정한 OCI 리전으로 전송됩니다.
+
+**OCI 배포까지 확인하려면** [알파 준비·실행 순서](ALPHA.md)에서 환경과 고정 버전을 준비합니다. 이 경로는 Companion과 Python Foundation, OCI 자원 및 Langfuse가 필요합니다. Python Foundation 저장소는 현재 비공개이므로 별도 접근 권한이나 제공받은 패키지가 필요합니다. 이 저장소의 공개가 그 의존성이나 시험 환경 접근 권한까지 제공하지는 않습니다.
+
+## 지금 확인한 것과 남은 일
+
+| 범위 | 확인한 내용 | 남은 일 |
+|---|---|---|
+| Hello Agent 배포 | 준비된 환경에서 Functions 빌드, 이미지 패키징, OKE 배포, 실제 모델·도구 호출, Langfuse 조회, Companion 상태 확인 | 새 고객 환경 전체 재현, 기본 OKE 경로의 복구·정리 실습 |
+| Service Desk | 규정 안내, 승인·중복 방지, OCI 호출, 명시적 기억 저장·검색, 일부 추적 경로 | 운영 사용자 인증, 업무 데이터 운영 구성, 자동 개인화 |
+| Enterprise AI 체험 | 기본 응답과 Python 실행 출력. 로컬 웹 API에서 3박 → 30만 원 및 임시 환경 삭제 확인 | 파일 검색·장기 기억·관리형 앱 호스팅. 로컬 웹 화면의 시각 검증 |
+| 운영 인수 | 입력 양식, 고정 버전 명세, 검증 기록, 운영 전 보완 목록 | 고객별 인증·TLS·상시 연결, 관측 재전송, 업무 평가, 비용·복구 목표 검증 |
+
+검증 기준일은 **2026년 11월 9일**입니다. 준비된 환경의 성공 기록이며 고객 환경 전체의 운영 준비 완료를 의미하지 않습니다. 현재 범위의 근거는 [Hello Agent 인수 기록](examples/hello-agent/DELIVERY.md), [Oracle 메모리 검증](docs/oracle-agent-memory.md), [Service Desk 추적 검증](deploy/SERVICE-DESK-LANGFUSE.md), [Enterprise AI 실험 결과](docs/oci-enterprise-ai-introduction.md#실제로-확인한-결과)에 있습니다.
+
+## 저장소를 찾아보는 방법
+
+| 경로 | 들어 있는 것 |
+|---|---|
+| `examples/` | 실행할 수 있는 업무·학습 예제와 테스트 |
+| `deploy/` | 빌드·패키징·배포·검증 도구와 실행 절차 |
+| `infra/terraform/` | OCI 인프라를 구성하는 모듈 |
+| `templates/` | 고객 업무·성공 조건·환경 요구를 정리하는 양식 |
+| `docs/` | 목표 구조, 설계 판단, 검증 결과와 제한 |
+| `releases/` | 기본 알파에 사용할 구성요소와 버전 명세 |
+| `scripts/` | Enterprise AI 단독 호출 등 보조 실행 예제 |
+
+자세한 작업은 [소스 빌드](deploy/BUILD.md), [OKE 배포 명세](deploy/OKE-MANIFESTS.md), [VM 설치와 Vault 연결](deploy/bootstrap-runtime.md), [Companion 연결](deploy/COMPANION-CONNECTIONS.md), [현재 진척도](docs/status.md)에서 확인할 수 있습니다. [OCI Companion 저장소](https://github.com/devmrko/oci-companion)는 독립적으로 관리합니다.
+
+이 프로젝트는 Oracle 또는 AWS의 공식 프로그램·제품 로드맵이 아닙니다. OCI 우선 구성과 필요한 오픈소스 조합을 검토·검증하는 프로젝트이며, 다른 에이전트 플랫폼과의 완전한 기능 동등성을 약속하지 않습니다.
