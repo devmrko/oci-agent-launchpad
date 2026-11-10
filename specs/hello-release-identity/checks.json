@@ -26,6 +26,11 @@
     "specs/hello-agent/tasks.md",
     "specs/hello-agent/traceability.json",
     "specs/hello-release-identity/tasks.md",
-    "specs/hello-release-identity/traceability.json"
+    "specs/hello-release-identity/traceability.json",
+    "scripts/collect_langfuse_evidence.py",
+    "scripts/correlate_hello_release.py",
+    "scripts/export_cloud_evidence.py",
+    "scripts/test_release_correlation.py",
+    "scripts/test_cloud_evidence.py"
   ]
 }

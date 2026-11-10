@@ -16,7 +16,8 @@ mkdir -p .run
   specs/hello-release-identity/checks.json \
   --output .run/hello-release-checks.json -- \
   .venv/bin/python -m pytest -q examples/hello-agent \
-  deploy/tests/test_hello_oke.py scripts/test_hello_identity.py
+  deploy/tests/test_hello_oke.py scripts/test_hello_identity.py \
+  scripts/test_cloud_evidence.py scripts/test_release_correlation.py
 
 python3 -S scripts/build_hello_identity.py \
   --evidence .run/hello-release-checks.json \
@@ -64,3 +65,5 @@ PYTHONPATH=.run/hello-installed .venv/bin/python -c \
 2026-11-10 로컬에서 테스트 21개(하위 사례 27개), 스크립트 회귀 테스트 107개가 통과했습니다. 실제 wheel을 빌드하고 별도 디렉터리에 설치한 뒤, 생성 도구의 식별 정보를 앱이 로딩하고 health→채팅 응답→관측 3개에 같은 값이 전달되는 것을 확인했습니다. 모델은 로컬 대역, 관측 HTTP는 MockTransport를 사용했습니다.
 
 이번 검증은 새 OCI 배포나 Langfuse 서버 수신 확인을 포함하지 않습니다. 이미지 내부 파일, 실제 Pod와 배포 ID, Langfuse 조회 결과를 새 release_id에 대조하는 클라우드 검증은 남아 있습니다. 현재 Companion의 과거 Hello Agent 기록은 계속 명세·이미지 미연결로 표시합니다.
+
+수집 측에서도 네 해시를 읽고 원본 파일·명령 근거와 대조할 수 있습니다. [Companion 연결 상태와 실행 방법](../companion-evidence/README.md#새-실행의-명세소스검증-결과까지-대조하기)을 참고하세요. 정상·누락·불일치·재검증 필요를 구분하며, 실제 앱 payload부터 모의 관측 API와 화면 JSON까지 로컬에서 검증했습니다.

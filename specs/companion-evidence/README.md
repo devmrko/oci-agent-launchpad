@@ -69,6 +69,8 @@ python3 collect_langfuse_evidence.py \
 
 수집기 원본은 [scripts/collect_langfuse_evidence.py](../../scripts/collect_langfuse_evidence.py)입니다. 실행 기록 전후 10분 안에서 최대 100개 미만의 관측만 읽습니다. 프로젝트를 하나로 확인할 수 없거나 범위를 초과하면 실패합니다. 수집 결과 파일을 Launchpad 작업 컴퓨터로 가져온 뒤 실행합니다.
 
+관측의 metadata에서도 `release_id`, `spec_sha256`, `source_sha256`, `test_evidence_sha256` 네 해시만 수집합니다. 그 외 메타데이터는 복사하지 않습니다. 누락과 잘못된 형식을 구분하고 잘못된 값의 원문도 출력하지 않습니다.
+
 ```sh
 python3 -S scripts/export_cloud_evidence.py \
   --record examples/hello-agent/verification/companion-job-2026-11-09.json \
@@ -87,3 +89,31 @@ python3 -S scripts/export_cloud_evidence.py \
 카드에서 OCI 배포 상세와 해당 Langfuse trace를 열 수 있습니다. trace 링크는 [Langfuse 공식 상세 URL 형식](https://langfuse.com/docs/observability/features/url)을 사용하며 기존 로그인·프로젝트 접근 권한이 필요합니다. 공개 trace로 전환하지 않습니다. 수집은 [Observations API v2](https://langfuse.com/docs/api-and-data-platform/features/public-api)의 trace ID·시간 범위 조건을 사용합니다.
 
 2026-11-10 기존 배포의 `SUCCEEDED`와 같은 trace의 세 관측을 실제로 다시 조회하고 화면 입력을 생성했습니다. 이는 과거 실행의 관측이 보관되어 있음을 확인한 것이며 현재 앱의 정상 동작을 재실행한 결과는 아닙니다. 이 과거 기록에는 명세·소스·이미지 해시의 연결이 없으므로 해당 부분은 **미연결**로 표시합니다. 현재 저장소의 명세를 과거 배포의 명세로 대신 표시하지 않습니다. 원본 JSON과 조회 스냅샷은 운영자가 제공한 자료이며 전자서명이나 독립적인 배포 승인 증명이 아닙니다.
+
+## 새 실행의 명세·소스·검증 결과까지 대조하기
+
+[릴리스 식별 정보](../hello-release-identity/README.md)를 설정한 새 앱은 health·채팅 응답·관측에 같은 네 해시를 남깁니다. 위 내보내기 명령에 다음 옵션을 함께 추가하면 원본 파일까지 대조합니다.
+
+```sh
+  --release-identity .run/hello-release-identity.json \
+  --release-evidence .run/hello-release-checks.json \
+  --source-root /absolute/path/to/checked-source
+```
+
+`source-root`는 그 릴리스를 만든 소스 체크아웃입니다. 새 파일이 있는 다른 체크아웃을 대신 지정하면 재검증 대상으로 표시될 수 있습니다. 과거 기록을 수정하거나 새 해시를 끼워 넣지 마세요.
+
+| 표시 상태 | 의미 |
+|---|---|
+| 명세·소스·검증 일치 | 현재 파일과 성공한 명령 근거, 릴리스 JSON, health·응답·모든 관측의 해시가 일치 |
+| 릴리스 근거 미제공 | 원본 릴리스 자료를 제공하지 않아 명세 연결을 판정하지 않음 |
+| 대조 자료 누락 | 세 옵션 중 일부만 제공됨 |
+| 실행 식별 정보 누락 | health·응답·관측 중 필요한 해시가 없음 |
+| 릴리스 불일치 | 다른 릴리스·버전·원본 근거를 가리킴 |
+| 재검증 필요 | 검증 대상 파일이 변경되었거나 현재 성공 근거를 확인할 수 없음 |
+| 릴리스 자료 오류 | JSON 자체 또는 수집한 해시 형식이 잘못됨 |
+
+일치할 때만 확인한 업무 명세 원문과 소스·검증 해시를 표시합니다. 나머지는 이유를 표시하며 명세 원문을 연결 완료처럼 보여 주지 않습니다. 배포·trace 조회 결과는 별도 단계로 남으므로 배포 성공과 명세 대조 실패를 함께 볼 수 있습니다.
+
+여기서 현재성은 파일 내용과 검증 결과의 일치 여부입니다. 단순히 날짜가 오래됐다고 실패시키거나, 오래된 실행을 오늘 정상 실행했다고 표시하지 않습니다. 결과는 내보낸 시점의 스냅샷이므로 파일을 변경한 뒤에는 다시 내보내야 합니다. 파일 경로가 잘못되어 입력 자체를 읽지 못하면 출력 파일을 만들지 않고 종료합니다.
+
+로컬에서 실제 앱이 만든 OTLP payload를 모의 관측 API로 전달하여 수집→대조→Companion JSON의 전체 경로를 검증했습니다. 다른 해시·누락·변조·소스 변경·실패 근거도 검사했습니다. 실제 과거 trace에 새 해시를 추가하지 않았으며, 합성 성공 사례를 운영 화면에 등록하지 않았습니다. 새 OCI 배포의 릴리스 대조는 아직 수행하지 않았습니다. CLI의 `EXPORTED`는 파일 생성 성공을 뜻하며 릴리스 대조 결과는 별도 `release_status`와 `release_matched`로 출력합니다.

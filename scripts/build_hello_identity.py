@@ -16,9 +16,8 @@ contract=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(contract)
 
 
-def prepare(root,evidence_path,output):
+def identity_from_evidence(root,raw):
     root=Path(root).resolve()
-    raw=Path(evidence_path).read_bytes()
     evidence=json.loads(raw)
     if not inspect(root,evidence)['usable_command_success']:
         raise ValueError('Current successful command evidence required')
@@ -32,6 +31,11 @@ def prepare(root,evidence_path,output):
             'test_evidence_sha256':hashlib.sha256(raw).hexdigest()}
     result['release_id']=contract.digest(result)
     contract.validate(result)
+    return result
+
+
+def prepare(root,evidence_path,output):
+    result=identity_from_evidence(root,Path(evidence_path).read_bytes())
     write_new(output,result)
     return result
 

@@ -25,7 +25,7 @@ class CloudEvidenceTests(unittest.TestCase):
         result=self.call()
         self.assertIn(self.record['delivery']['deployment_id'],result['stages'][3]['url'])
         self.assertEqual(result['stages'][4]['url'],'http://localhost:18080/project/project1/traces/'+self.trace['trace_id'])
-        self.assertIn('미연결',result['stages'][0]['status'])
+        self.assertIn('미제공',result['stages'][0]['status'])
         self.assertNotIn('answer',json.dumps(result))
 
     def test_identity_and_success_mismatches_rejected(self):
@@ -68,7 +68,7 @@ class CloudEvidenceTests(unittest.TestCase):
             self.assertNotIn('PRIVATE',json.dumps(result))
             request=client.open.call_args_list[1].args[0]
             self.assertIn('traceId='+tid,request.full_url)
-            self.assertIn('fields=core%2Cbasic%2Cio',request.full_url)
+            self.assertIn('fields=core%2Cbasic%2Cio%2Cmetadata',request.full_url)
             self.assertEqual(result['observations'][0]['trace_id'],tid)
             for base in ['http://evil.example','http://localhost@evil.example','http://127.0.0.1:3000/?key=x']:
                 with self.assertRaises(ValueError): collect(tid,0,base,{})

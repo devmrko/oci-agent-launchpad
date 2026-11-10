@@ -8,6 +8,25 @@ import re
 from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, HTTPRedirectHandler, build_opener
 
+RELEASE_KEYS=('release_id','spec_sha256','source_sha256','test_evidence_sha256')
+
+
+def release_metadata(row):
+    metadata=row.get('metadata')
+    if metadata is None:
+        return {'release':{}}
+    if not isinstance(metadata,dict):
+        return {'release':{},'release_invalid':True}
+    result={}; invalid=False
+    for key in RELEASE_KEYS:
+        if key in metadata:
+            value=metadata[key]
+            if isinstance(value,str) and re.fullmatch('[a-f0-9]{64}',value):
+                result[key]=value
+            else:
+                invalid=True
+    return {'release':result,'release_invalid':invalid}
+
 
 class NoRedirect(HTTPRedirectHandler):
     def redirect_request(self, *args, **kwargs):
@@ -32,7 +51,7 @@ def collect(trace_id, observed_at, base, values):
         raise ValueError('Expected one API-key project')
     project=projects[0]['id']
     query=urlencode({'traceId':trace_id,'fromStartTime':(stamp-timedelta(minutes=10)).isoformat(),
-                     'toStartTime':(stamp+timedelta(minutes=10)).isoformat(),'fields':'core,basic,io','limit':100})
+                     'toStartTime':(stamp+timedelta(minutes=10)).isoformat(),'fields':'core,basic,io,metadata','limit':100})
     rows=get('/api/public/v2/observations?'+query)['data']
     if len(rows)>=100:
         raise ValueError('Trace exceeds bounded collector limit')
@@ -40,7 +59,8 @@ def collect(trace_id, observed_at, base, values):
         raise ValueError('API returned different trace or project')
     return {'project_id':project,'trace_id':trace_id,'checked_at':datetime.now(timezone.utc).isoformat(),
             'observations':[{'trace_id':r['traceId'],'project_id':project,'name':r['name'],'type':r['type'],
-                             'input_present':r.get('input') is not None,'output_present':r.get('output') is not None} for r in rows]}
+                             'input_present':r.get('input') is not None,'output_present':r.get('output') is not None,
+                             **release_metadata(r)} for r in rows]}
 
 
 def main():

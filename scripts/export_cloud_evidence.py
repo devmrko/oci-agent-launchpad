@@ -7,6 +7,7 @@ import re
 from urllib.parse import urlsplit
 from package_travel_demo import sha
 from requirement_handoff import read, write_new
+from correlate_hello_release import attach
 
 NAMES = {'hello-agent.chat': 'AGENT', 'oci.model': 'GENERATION', 'get_time': 'TOOL'}
 CHECKS = {'health', 'authentication', 'model_and_tool', 'telemetry_export', 'langfuse_input_output'}
@@ -23,7 +24,7 @@ def ocid(value, kind, region):
     return value
 
 
-def entry(record, deployment, trace, scope, base):
+def entry(record, deployment, trace, scope, base, *, identity=None, evidence=None, root=None):
     require(set(scope) == {'profile','tenancy','user','demo','region','compartment'} and scope['demo'] is False)
     require(all(isinstance(scope[k], str) and scope[k] for k in scope if k != 'demo'))
     require(record['status'] == 'PASS' and record['execution_location'] == 'OKE')
@@ -62,7 +63,7 @@ def entry(record, deployment, trace, scope, base):
             and not u.query and not u.fragment and u.path in {'','/'} and u.port != 0)
     url = base.rstrip('/') + '/project/' + project + '/traces/' + tid
     source_hash = sha(json.dumps(record,sort_keys=True).encode())
-    return {'scope':scope, 'name':f'Hello Agent · {version} · OCI 검증 Job',
+    result = {'scope':scope, 'name':f'Hello Agent · {version} · OCI 검증 Job',
             'exportedAt':datetime.now(timezone.utc).isoformat(),
             'specText':'이 과거 실행 기록에는 명세·소스·이미지 해시 연결이 없습니다. 현재 저장소 명세가 당시 배포에 포함되었다고 판정하지 않습니다.',
             'stages':[
@@ -72,6 +73,7 @@ def entry(record, deployment, trace, scope, base):
                 {'title':'OCI 배포','status':'조회 기록 SUCCEEDED','detail':f'배포 ID {run}. 검증 기록과 OCI 조회의 ID·구획·리전이 일치합니다. 현재 앱 정상 동작을 뜻하지 않습니다.','digest':None,'url':f'/deployments/runs?pipeline={pipeline}&run={run}'},
                 {'title':'Langfuse 실행 추적','status':'같은 trace 관측 확인','detail':f'{checked.isoformat()} 조회 · trace {tid} · 프로젝트 {project}. AGENT·GENERATION·TOOL 입력·출력 존재 확인.','digest':None,'url':url}
             ]}
+    return attach(result,record,trace,identity,evidence,root)
 
 
 def main():
@@ -80,9 +82,14 @@ def main():
         p.add_argument('--'+name,required=True,type=Path)
     p.add_argument('--langfuse-url',required=True)
     p.add_argument('--append-to',type=Path,help='Existing schemaVersion 1 snapshot; output must be a new file')
+    p.add_argument('--release-identity',type=Path)
+    p.add_argument('--release-evidence',type=Path)
+    p.add_argument('--source-root',type=Path)
     a=p.parse_args()
     try:
-        result=entry(read(a.record),read(a.deployment),read(a.trace),read(a.scope_file),a.langfuse_url)
+        result=entry(read(a.record),read(a.deployment),read(a.trace),read(a.scope_file),a.langfuse_url,
+                     identity=read(a.release_identity) if a.release_identity else None,
+                     evidence=a.release_evidence.read_bytes() if a.release_evidence else None,root=a.source_root)
         document=read(a.append_to) if a.append_to else {'schemaVersion':1,'entries':[]}
         require(document['schemaVersion']==1 and isinstance(document['entries'],list))
         require(not any(e['scope']==result['scope'] and e['name']==result['name'] for e in document['entries']))
@@ -90,7 +97,10 @@ def main():
         write_new(a.output,document)
     except (OSError,ValueError,KeyError,TypeError,AttributeError,OverflowError):
         p.exit(1,'Check snapshot identity, completed checks, scope, URL and a new output path.\n')
-    print(json.dumps({'status':'EXPORTED','entries':len(document['entries']),'new_cloud_execution':False}))
+    print(json.dumps({'status':'EXPORTED','entries':len(document['entries']),
+                      'release_status':result['stages'][0]['status'],
+                      'release_matched':result['stages'][0]['status']=='명세·소스·검증 일치',
+                      'new_cloud_execution':False},ensure_ascii=False))
 
 if __name__=='__main__':
     main()
