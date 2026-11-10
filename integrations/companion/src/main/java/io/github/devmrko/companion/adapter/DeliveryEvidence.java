@@ -26,6 +26,8 @@ public class DeliveryEvidence {
     public static boolean allowedUrl(String value) {
         if(value==null) return true;
         if(value.equals("/deployments")) return true;
+        if(value.startsWith("/deployments/runs?")) return value.matches(
+            "/deployments/runs\\?pipeline=ocid1\\.devopsdeploypipeline\\.oc1\\.[a-z0-9-]+\\.[a-z0-9]+&run=ocid1\\.devopsdeployment\\.oc1\\.[a-z0-9-]+\\.[a-z0-9]+");
         try {
             URI u=URI.create(value);
             return value.length()<=2048 && ("http".equals(u.getScheme()) || "https".equals(u.getScheme()))

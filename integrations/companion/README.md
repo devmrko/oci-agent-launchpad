@@ -22,4 +22,4 @@ java -jar target/oci-companion-0.1.0-SNAPSHOT.jar \
 
 설치 후 `/delivery/evidence`에서 로그인, 접속 범위 일치, A·B 기록과 명세 원문을 확인합니다. Java 테스트는 범위 격리, 위험한 링크 거부, 손상 파일 처리, 로그인 요구와 HTML 이스케이프를 검사합니다. Launchpad의 Python 테스트는 실제 로컬 릴리스 생성과 내보내기, 해시 불일치와 출력 덮어쓰기 거부를 검사합니다.
 
-스냅샷 생성과 화면 조회는 클라우드 API를 호출하지 않습니다. OCI 배포 ID와 개별 Langfuse trace를 실제 릴리스에 연결하는 기능은 후속 작업입니다.
+화면 조회와 스냅샷 내보내기는 클라우드 API를 호출하지 않습니다. 별도 수집 단계에서 OCI 배포와 Langfuse 관측을 읽고, 기존 Hello Agent 검증 기록의 배포 ID·버전·trace ID와 대조할 수 있습니다. [실제 배포 기록 연결 방법](../../specs/companion-evidence/README.md#실제-oci-배포와-langfuse-trace-연결하기)을 참고하세요. 명세·소스·이미지 해시까지 묶는 연결은 후속 작업입니다.

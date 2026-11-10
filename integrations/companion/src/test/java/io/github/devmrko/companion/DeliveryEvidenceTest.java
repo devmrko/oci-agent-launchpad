@@ -21,6 +21,11 @@ class DeliveryEvidenceTest {
    assertFalse(DeliveryEvidence.allowedUrl("//evil.example"));
    assertFalse(DeliveryEvidence.allowedUrl("https://user:secret@example.com"));
    assertFalse(DeliveryEvidence.allowedUrl("https://example.com/?key=secret"));
+   String run="/deployments/runs?pipeline=ocid1.devopsdeploypipeline.oc1.ap-seoul-1.abc&run=ocid1.devopsdeployment.oc1.ap-seoul-1.def";
+   assertTrue(DeliveryEvidence.allowedUrl(run));
+   assertFalse(DeliveryEvidence.allowedUrl(run+"&redirect=https://evil.example"));
+   assertFalse(DeliveryEvidence.allowedUrl(run.replace("def","def%26evil")));
+   assertFalse(DeliveryEvidence.allowedUrl("/deployments/runs?run=other"));
    Files.writeString(file,"{}");assertThrows(IllegalStateException.class,()->registry.list(a));
   } finally {Files.deleteIfExists(file);}
  }
