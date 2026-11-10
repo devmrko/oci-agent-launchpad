@@ -1,0 +1,16 @@
+<!DOCTYPE html><html lang="ko" xmlns:th="http://www.thymeleaf.org"><head th:replace="~{layout :: head('사용자 앱 운영')}"></head><body>
+<div th:replace="~{layout :: header}"></div><main class="catalog-shell page-content app-content"><div th:replace="~{layout :: notice}"></div>
+<h1>사용자 앱 운영</h1><p>사용자가 만든 앱을 등록하고 같은 절차로 빌드·실행·상태 확인·로그 조회·버전 복구합니다. Python·Java·Foundation 등 특정 언어나 프레임워크를 요구하지 않습니다.</p>
+<p><strong>현재 실행 대상: 관리 서버의 로컬 프로세스</strong> · OCI 배포와 별개입니다. 등록한 코드의 빌드·실행 명령은 관리 서버 사용자 권한으로 실행됩니다. 단일 운영자의 신뢰한 코드만 등록하세요.</p>
+<section class="card"><h2>프로젝트 등록</h2><p>서버에 준비한 프로젝트의 app.json에서 파일 목록·빌드 명령·실행 명령·상태 확인 경로를 읽습니다.</p>
+<form th:action="@{/applications/action}" method="post"><input type="hidden" name="action" value="register"><label>서버 프로젝트 절대 경로 <input name="source" required placeholder="/path/to/my-agent"></label><label><input type="checkbox" name="trusted" value="true" required> 이 서버에서 실행할 수 있는 신뢰한 코드입니다</label><button type="submit">등록·빌드</button></form></section>
+<section class="card"><h2>등록된 앱</h2><p th:if="${apps.isEmpty()}">현재 범위의 등록 앱이 없거나 관리 서버가 연결되지 않았습니다.</p>
+<div class="table-scroll"><table class="data-table"><thead><tr><th>앱</th><th>현재 상태</th><th>버전·실행 위치</th><th>운영</th></tr></thead><tbody><tr th:each="app : ${apps}">
+<td th:text="${app.id()}"></td><td th:text="${app.status()}"></td><td><span th:text="${app.version() ?: '미실행'}"></span><p th:if="${app.port()!=null}">서버 loopback 포트 <span th:text="${app.port()}"></span> · PID <span th:text="${app.pid()}"></span></p><p th:if="${app.previous()!=null}">이전 정상 버전 <span th:text="${app.previous()}"></span></p></td>
+<td><form th:action="@{/applications/action}" method="post"><input type="hidden" name="action" value="deploy"><input type="hidden" name="app" th:value="${app.id()}"><select name="version" aria-label="배포 버전"><option th:each="version : ${app.versions()}" th:value="${version}" th:text="${version}"></option></select><button>선택 버전 배포</button></form>
+<form th:if="${app.previous()!=null}" th:action="@{/applications/action}" method="post"><input type="hidden" name="action" value="rollback"><input type="hidden" name="app" th:value="${app.id()}"><button>이전 정상 버전 복구</button></form>
+<form th:if="${app.version()!=null}" th:action="@{/applications/action}" method="post"><input type="hidden" name="action" value="stop"><input type="hidden" name="app" th:value="${app.id()}"><button>중지</button></form>
+<span th:each="version : ${app.versions()}"><span th:text="${version}"></span> <a th:href="@{/applications(app=${app.id()},version=${version},kind='build')}">빌드 로그</a> · <a th:href="@{/applications(app=${app.id()},version=${version},kind='runtime')}">실행 로그</a><br></span></td>
+</tr></tbody></table></div></section><section class="card" th:if="${logText!=null}"><h2>로그 · 마지막 16 KiB</h2><div class="table-scroll"><pre th:text="${logText}"></pre></div></section>
+<p>UP은 HTTP 상태 확인 성공입니다. 업무 정답·모델 품질·실제 모델 호출을 뜻하지 않습니다. 모델·도구·토큰·비용은 앱 계측 연동이 필요합니다. 새 버전이 시작되지 않으면 기존 정상 버전을 유지합니다.</p>
+</main><footer th:replace="~{layout :: footer}"></footer></body></html>

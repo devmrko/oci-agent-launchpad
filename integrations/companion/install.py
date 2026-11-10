@@ -17,6 +17,10 @@ def main():
     if code.count(marker)!=1 or html.count(nav)!=1:
         parser.error('Unsupported Companion source structure; review before applying')
     code=code.replace(marker+'"/operations/tools"',marker+'"/delivery/evidence","/operations/tools"')
+    if '"/applications"' not in code:
+        code=code.replace(marker,marker+'"/applications",')
+    if 'href="/applications"' not in html:
+        html=html.replace(nav,'<a class="side-item" href="/applications" data-nav-path="/applications" title="사용자 앱 운영"><span class="nav-icon" aria-hidden="true">▦</span><span class="nav-text">사용자 앱 운영</span></a>'+nav)
     if 'href="/delivery/evidence"' not in html:
         html=html.replace(nav,'<a class="side-item" href="/delivery/evidence" data-nav-path="/delivery" title="개발·실행 근거"><span class="nav-icon" aria-hidden="true">✓</span><span class="nav-text">개발·실행 근거</span></a>'+nav)
     for source in Path(__file__).with_name('src').rglob('*'):

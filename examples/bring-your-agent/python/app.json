@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "id": "user-python",
+  "version": "v1",
+  "files": ["app.py"],
+  "build": [],
+  "run": ["python3", "app.py", "{port}"],
+  "health_path": "/ready"
+}

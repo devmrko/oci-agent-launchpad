@@ -1,6 +1,6 @@
-# Companion에 개발·실행 근거 화면 설치하기
+# Companion에 사용자 앱 운영·개발 근거 화면 설치하기
 
-이 확장은 Launchpad에서 검증한 릴리스 기록을 Companion의 접속 범위별로 보여 줍니다. [사용 목적과 기록 생성 방법](../../specs/companion-evidence/README.md)을 먼저 확인하세요.
+이 확장은 사용자 앱 등록·배포·상태·로그·복구 화면과 개발 근거 화면을 추가합니다. 앱 운영은 [사용자 앱 운영 안내](../../specs/user-app-platform/README.md)의 관리 서버와 접속 범위 파일을 먼저 준비하세요. 개발 근거 화면은 Launchpad에서 검증한 릴리스 기록을 Companion의 접속 범위별로 보여 줍니다. [사용 목적과 기록 생성 방법](../../specs/companion-evidence/README.md)을 먼저 확인하세요.
 
 Companion은 별도 저장소입니다. 이 폴더는 화면과 테스트를 복사하는 소스 확장이며, Companion 본체에 병합된 배포판은 아닙니다. `0.1.0-SNAPSHOT` 개발 소스에서 확인했습니다. 설치기는 기존 `CatalogPages.java`와 `layout.html`을 수정하고 같은 이름의 확장 파일을 덮어쓰므로, 별도 개발 체크아웃에서 실행하고 변경 사항을 검토하세요.
 
@@ -13,7 +13,7 @@ python3 integrations/companion/install.py /absolute/path/to/oci-companion
 대상 Companion 폴더에서 Java 21과 기존 Maven 설정을 사용해 검증하고 실행합니다.
 
 ```sh
-./mvnw -Dtest=DeliveryEvidenceTest,DeliveryEvidenceWebTest package
+./mvnw -Dtest=UserAppPagesTest,DeliveryEvidenceTest,DeliveryEvidenceWebTest package
 java -jar target/oci-companion-0.1.0-SNAPSHOT.jar \
   --companion.delivery-evidence=/absolute/path/to/companion-delivery-evidence.json
 ```

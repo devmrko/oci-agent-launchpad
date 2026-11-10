@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "id": "user-java",
+  "version": "v1",
+  "files": ["App.java"],
+  "build": [["javac", "App.java"], ["jar", "--create", "--file", "app.jar", "--main-class", "App", "App.class"]],
+  "run": ["java", "-jar", "app.jar", "{port}"],
+  "health_path": "/ready"
+}
