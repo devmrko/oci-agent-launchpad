@@ -35,6 +35,18 @@ class UserAppPagesTest {
   when(runtime.logs(any(),any(),any(),any())).thenReturn("<script>secret()</script>");
   mvc.perform(get("/applications").session(session).param("app","user-python").param("version","v1")).andExpect(status().isOk()).andExpect(content().string(containsString("&lt;script&gt;"))).andExpect(content().string(not(containsString("<script>secret()"))));
  }
+ @Test void invocationRequiresCsrfAndEscapesResults() throws Exception {
+  var session=(MockHttpSession)mvc.perform(post("/connect").with(csrf()).param("profile","DEMO")).andReturn().getRequest().getSession(false);
+  mvc.perform(post("/applications/action").session(session).param("action","invoke").param("app","connected-agent").param("message","6 times 7")).andExpect(status().isForbidden());
+  verify(runtime,never()).invoke(any(),any(),any());
+  when(runtime.invoke(any(),eq("connected-agent"),eq("6 times 7"))).thenReturn("<script>result</script>");
+  var result=mvc.perform(post("/applications/action").with(csrf()).session(session).param("action","invoke").param("app","connected-agent").param("message","6 times 7")).andExpect(redirectedUrl("/applications")).andReturn();
+  verify(runtime).invoke(any(),eq("connected-agent"),eq("6 times 7"));
+  when(runtime.list(any())).thenReturn(List.of());
+  mvc.perform(get("/applications").session(session).flashAttrs(result.getFlashMap())).andExpect(content().string(containsString("&lt;script&gt;result&lt;/script&gt;")));
+  when(runtime.requests(any(),eq("connected-agent"))).thenReturn("[{status:FAILED, error:MCP_FAILED}]");
+  mvc.perform(get("/applications").session(session).param("app","connected-agent").param("kind","requests")).andExpect(content().string(containsString("MCP_FAILED")));
+ }
  @Test void wrongScopeIsRejectedBeforeTransport() throws Exception {
   var dir=java.nio.file.Files.createTempDirectory("app-scope-");
   try {

@@ -16,6 +16,8 @@ python3 scripts/user_app_demo.py --output .run/user-app-demo
 
 OCI 계정·모델 호출 없이 두 언어의 실제 앱으로 확인합니다. 직접 작성한 앱을 연결하는 `app.json` 규약, 관리 CLI/API, Companion 화면 설치와 현재 한계도 같은 안내에 있습니다.
 
+실제 모델과 도구를 연결하려면 [LLM·MCP·실행 추적 예제](examples/bring-your-agent/connected/README.md)를 참고하세요. 앱별 설정·비밀값을 주입하고, OCI SDK 또는 OpenAI 호환 방식으로 모델을 호출한 뒤 MCP 도구를 실행합니다. Companion 호출 화면과 Langfuse의 같은 요청 ID로 결과·실패 단계·토큰 기록을 확인할 수 있습니다.
+
 ## 처음 실행하기 — 계정 없이 SDD 흐름 확인
 
 Git과 **Python 3.12 이상**을 준비하세요. 아래 경로는 추가 패키지·OCI 계정·AI 도구 없이 실행할 수 있습니다. macOS·Linux 터미널에서 시작합니다.

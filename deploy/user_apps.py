@@ -14,6 +14,8 @@ import socket
 import subprocess
 import threading
 import time
+from datetime import datetime, timezone
+from urllib.error import HTTPError
 from urllib.request import Request, build_opener, ProxyHandler, HTTPRedirectHandler
 
 NAME=r'[a-z][a-z0-9-]{0,47}'
@@ -33,7 +35,8 @@ def argv(value):
 
 
 def manifest(value):
-    if set(value)!={'schema_version','id','version','files','build','run','health_path'} or value['schema_version']!=1:
+    required={'schema_version','id','version','files','build','run','health_path'}
+    if not isinstance(value,dict) or not required<=set(value) or set(value)-required-{'invoke_path'} or value['schema_version']!=1:
         raise ValueError('Expected the documented app manifest fields')
     check(value['id']);check(value['version'],VERSION)
     files=value['files']
@@ -51,6 +54,8 @@ def manifest(value):
     argv(value['run'])
     if not isinstance(value['health_path'],str) or re.fullmatch(r'/[A-Za-z0-9/_-]*',value['health_path']) is None:
         raise ValueError('Expected a relative HTTP health path')
+    if 'invoke_path' in value and (not isinstance(value['invoke_path'],str) or re.fullmatch(r'/[A-Za-z0-9/_-]+',value['invoke_path']) is None):
+        raise ValueError('Invalid invoke path')
     return value
 
 
@@ -68,7 +73,8 @@ def environment():
 
 def stop_process(process):
     if process.poll() is None:
-        os.killpg(process.pid,signal.SIGTERM)
+        try:os.killpg(process.pid,signal.SIGTERM)
+        except ProcessLookupError:return
         try:process.wait(timeout=3)
         except subprocess.TimeoutExpired:
             os.killpg(process.pid,signal.SIGKILL);process.wait(timeout=3)
@@ -110,7 +116,9 @@ class Manager:
     def __init__(self,state):
         self.state=Path(state).resolve();self.state.mkdir(parents=True,exist_ok=True,mode=0o700)
         (self.state/'apps').mkdir(exist_ok=True);(self.state/'logs').mkdir(exist_ok=True)
-        self.active={};self.previous={};self.lock=threading.RLock()
+        (self.state/'config').mkdir(exist_ok=True,mode=0o700)
+        (self.state/'requests').mkdir(exist_ok=True,mode=0o700)
+        self.active={};self.previous={};self.lock=threading.RLock();self.inflight=set()
 
     def release(self,app,version):
         return self.state/'apps'/check(app)/check(version,VERSION)
@@ -152,7 +160,7 @@ class Manager:
             if value['id']!=app or value['version']!=version or hashes(root)!=receipt['files']:
                 raise ValueError('Registered release changed; register a new version')
             with socket.socket() as sock:sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
-            env=environment();env.update(PORT=str(port),APP_VERSION=version,BIND_HOST='127.0.0.1',PYTHONDONTWRITEBYTECODE='1')
+            env=environment();env.update(self.runtime_env(app));env.update(PORT=str(port),APP_VERSION=version,BIND_HOST='127.0.0.1',PYTHONDONTWRITEBYTECODE='1')
             command=[s.replace('{port}',str(port)) for s in value['run']]
             logpath=self.state/'logs'/f'{app}-{version}-runtime.log'
             log=os.fdopen(os.open(logpath,os.O_WRONLY|os.O_CREAT|os.O_APPEND,0o600),'ab');process=None
@@ -165,7 +173,7 @@ class Manager:
                     time.sleep(0.1)
                 if process.poll() is not None:raise ValueError('App exited; previous version retained')
                 previous=self.active.get(app)
-                self.active[app]={'process':process,'version':version,'port':port,'health_path':value['health_path']}
+                self.active[app]={'process':process,'version':version,'port':port,'health_path':value['health_path'],'invoke_path':value.get('invoke_path')}
                 if previous:
                     if previous['version']!=version:self.previous[app]=previous['version']
                     stop_process(previous['process'])
@@ -211,6 +219,103 @@ class Manager:
             stream.seek(0,2);size=stream.tell();stream.seek(max(0,size-16384));text=stream.read().decode(errors='replace')
         return {'id':app,'version':version,'kind':kind,'tail':text,'truncated':size>16384}
 
+    def configure(self,app,source):
+        check(app)
+        source=Path(source)
+        value=self.read_private(source)
+        self.validate_config(value)
+        # Resolve all references before installing a new configuration.
+        self.resolve_env(value)
+        with self.lock:save(self.state/'config'/f'{app}.json',value)
+        return {'id':app,'status':'CONFIGURED','effective':'next deployment'}
+
+    @staticmethod
+    def read_private(path):
+        path=Path(path)
+        if not path.is_absolute() or path.is_symlink() or not path.is_file() or path.stat().st_mode & 0o077:
+            raise ValueError('Configuration and secrets require private regular files (0600)')
+        if path.stat().st_size>65536:raise ValueError('Configuration too large')
+        return json.loads(path.read_text())
+
+    @staticmethod
+    def validate_config(value):
+        if not isinstance(value,dict) or set(value)!={'env','secret_files'}:raise ValueError('Expected env and secret_files')
+        reserved={'PATH','HOME','JAVA_HOME','JAVA_TOOL_OPTIONS','JDK_JAVA_OPTIONS','CLASSPATH','NODE_OPTIONS','BASH_ENV','ENV','PORT','APP_VERSION','BIND_HOST'}
+        for group in ('env','secret_files'):
+            if not isinstance(value[group],dict) or len(value[group])>64:raise ValueError('Invalid runtime environment')
+            for key,item in value[group].items():
+                if not re.fullmatch(r'[A-Z][A-Z0-9_]{0,63}',key) or key in reserved or key.startswith(('LD_','DYLD_','PYTHON')):
+                    raise ValueError('Reserved or invalid environment name')
+                if not isinstance(item,str) or len(item)>16384 or '\0' in item:raise ValueError('Invalid environment value')
+        if set(value['env']) & set(value['secret_files']):raise ValueError('Duplicate environment name')
+
+    @staticmethod
+    def resolve_env(value):
+        result=dict(value['env'])
+        for key,name in value['secret_files'].items():
+            path=Path(name)
+            if not path.is_absolute() or path.is_symlink() or not path.is_file() or path.stat().st_mode & 0o077 or path.stat().st_size>16384:
+                raise ValueError('Secret reference must be a private regular file (0600)')
+            item=path.read_text().rstrip('\r\n')
+            if not item or '\0' in item:raise ValueError('Invalid secret value')
+            result[key]=item
+        return result
+
+    def runtime_env(self,app):
+        path=self.state/'config'/f'{check(app)}.json'
+        if not path.exists():return {}
+        value=self.read_private(path);self.validate_config(value)
+        return self.resolve_env(value)
+
+    def invoke(self,app,payload):
+        check(app)
+        encoded=json.dumps(payload).encode()
+        if len(encoded)>4096:raise ValueError('Request too large')
+        with self.lock:
+            current=self.active.get(app)
+            if not current or current['process'].poll() is not None:raise ValueError('App is not running')
+            if not current.get('invoke_path'):raise ValueError('App has no invoke_path')
+            if app in self.inflight:raise ValueError('App already processing a request')
+            self.inflight.add(app)
+            port,version,path=current['port'],current['version'],current['invoke_path']
+        trace_id=secrets.token_hex(16);start=time.monotonic()
+        event={'trace_id':trace_id,'app':app,'version':version,'time':datetime.now(timezone.utc).isoformat()}
+        result=None
+        try:
+            request=Request(f'http://127.0.0.1:{port}'+path,data=encoded,
+                headers={'Content-Type':'application/json','X-Request-ID':trace_id})
+            with build_opener(ProxyHandler({}),NoRedirect()).open(request,timeout=45) as response:
+                raw=response.read(65537)
+                if len(raw)>65536:raise ValueError('Response too large')
+                result=json.loads(raw)
+                event.update(status='SUCCEEDED',http_status=response.status)
+        except HTTPError as error:
+            # Never log provider/app bodies or automatically replay an operation.
+            event.update(status='FAILED',http_status=error.code,error='APP_HTTP_ERROR')
+            try:
+                raw=error.read(65537)
+                if len(raw)<=65536:result=json.loads(raw)
+            except (OSError,ValueError):pass
+            finally:error.close()
+        except (OSError,ValueError):
+            event.update(status='FAILED',error='TIMEOUT_OR_INVALID_RESPONSE')
+        finally:
+            with self.lock:self.inflight.discard(app)
+        if isinstance(result,dict) and result.get('trace_id')==trace_id:
+            if isinstance(result.get('telemetry'),str) and result.get('telemetry') in {'exported','failed','disabled'}:event['telemetry']=result['telemetry']
+            stages=result.get('stages',[])
+            if isinstance(stages,list):
+                event['stages']=[{k:v for k,v in item.items() if (k=='stage' and isinstance(v,str) and v in {'model','mcp.multiply'}) or (k=='status' and isinstance(v,str) and v in {'SUCCEEDED','FAILED'}) or (k=='error' and isinstance(v,str) and v in {'MODEL_FAILED','MCP_FAILED'}) or (k=='duration_ms' and type(v) is int and 0<=v<=60000)} for item in stages[:10] if isinstance(item,dict)]
+        event['duration_ms']=round((time.monotonic()-start)*1000)
+        with self.lock:
+            events=self.requests(app)
+            save(self.state/'requests'/f'{app}.json',(events+[event])[-100:])
+        return dict(event,response=result)
+
+    def requests(self,app):
+        path=self.state/'requests'/f'{check(app)}.json'
+        return json.loads(path.read_text()) if path.exists() else []
+
     def close(self):
         for app in list(self.active):self.stop(app)
 
@@ -236,7 +341,7 @@ def serve(state,port):
                 size=int(self.headers.get('Content-Length','0'))
                 if not 0<size<=8192:raise ValueError('Invalid request size')
                 args=json.loads(self.rfile.read(size));op=args.pop('action')
-                if op not in {'register','deploy','rollback','stop','logs'}:raise ValueError('Unsupported operation')
+                if op not in {'register','deploy','rollback','stop','logs','configure','invoke','requests'}:raise ValueError('Unsupported operation')
                 self.respond(200,getattr(manager,op)(**args))
             except (ValueError,KeyError,TypeError,OSError,subprocess.SubprocessError) as error:
                 self.respond(409,{'error':str(error)[:300] if isinstance(error,ValueError) else 'Operation failed; inspect local configuration and logs'})
@@ -257,6 +362,9 @@ def main():
     sub=p.add_subparsers(dest='action',required=True)
     s=sub.add_parser('serve');s.add_argument('--port',type=int,default=8096)
     s=sub.add_parser('register');s.add_argument('source',type=Path)
+    s=sub.add_parser('configure');s.add_argument('app');s.add_argument('source',type=Path)
+    s=sub.add_parser('invoke');s.add_argument('app');s.add_argument('payload',type=json.loads)
+    sub.add_parser('requests').add_argument('app')
     s=sub.add_parser('deploy');s.add_argument('app');s.add_argument('version')
     for name in ('rollback','stop'):sub.add_parser(name).add_argument('app')
     sub.add_parser('status')
@@ -265,7 +373,7 @@ def main():
     if args.action=='serve':
         serve(args.state,args.port);return
     data=vars(args).copy();state=data.pop('state')
-    if args.action=='register':data['source']=str(args.source.resolve())
+    if args.action in {'register','configure'}:data['source']=str(args.source.resolve())
     url=json.loads((state/'connection.json').read_text())['url'];token=(state/'operator-token').read_text()
     request=Request(url+('/apps' if args.action=='status' else '/command'),data=None if args.action=='status' else json.dumps(data).encode(),
                     headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'})

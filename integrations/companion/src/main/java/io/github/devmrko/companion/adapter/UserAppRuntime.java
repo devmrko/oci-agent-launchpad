@@ -47,6 +47,14 @@ public class UserAppRuntime {
   if(action.equals("deploy")){if(!version.matches("[A-Za-z0-9][A-Za-z0-9._-]{0,63}"))throw new IllegalArgumentException("버전을 선택하세요.");data.put("version",version);}
   request(scope,data);
  }
+ public String invoke(Scope scope,String app,String message){
+  if(!app.matches("[a-z][a-z0-9-]{0,47}")||message.isBlank()||message.length()>1000)throw new IllegalArgumentException("앱과 1~1000자 메시지를 확인하세요.");
+  return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(mapper.readTree(request(scope,Map.of("action","invoke","app",app,"payload",Map.of("message",message)))));
+ }
+ public String requests(Scope scope,String app){
+  if(!app.matches("[a-z][a-z0-9-]{0,47}"))throw new IllegalArgumentException("앱을 확인하세요.");
+  return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(mapper.readTree(request(scope,Map.of("action","requests","app",app))));
+ }
  public String logs(Scope scope,String app,String version,String kind){
   if(!app.matches("[a-z][a-z0-9-]{0,47}")||!version.matches("[A-Za-z0-9][A-Za-z0-9._-]{0,63}")||!Set.of("build","runtime").contains(kind))throw new IllegalArgumentException("로그 대상을 확인하세요.");
   return mapper.readTree(request(scope,Map.of("action","logs","app",app,"version",version,"kind",kind))).path("tail").asText();

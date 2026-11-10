@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "id": "connected-agent",
+  "version": "v1",
+  "files": ["app.py", "connections.py"],
+  "build": [],
+  "run": ["python3", "app.py", "{port}"],
+  "health_path": "/ready",
+  "invoke_path": "/invoke"
+}
