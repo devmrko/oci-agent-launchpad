@@ -13,6 +13,7 @@ from python_foundation.errors import AuthenticationRequired
 from python_foundation.web import install_web
 from agent import validate, execute, oci_decision
 from hello_telemetry import export
+from hello_release import load as load_release
 
 VERSION = "0.1.0"
 PAGE = """<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
@@ -42,13 +43,14 @@ def create_app(*, planner=None, token=None, telemetry=None):
     app = FastAPI(title="Hello Agent", version=VERSION)
     install_web(app, Security(settings, verifier=Verifier(token or os.environ["HELLO_TOKEN"])))
     model = planner or oci_decision
+    release = load_release(os.environ.get("HELLO_RELEASE_IDENTITY"))
     cfg = telemetry
     if cfg is None and os.environ.get("HELLO_LANGFUSE_CONFIG"):
         cfg = json.loads(Path(os.environ["HELLO_LANGFUSE_CONFIG"]).read_text())
     @app.get("/", response_class=HTMLResponse)
     def home(): return PAGE
     @app.get("/health")
-    def health(): return {"status": "UP", "version": VERSION, "agent_id": "hello-agent"}
+    def health(): return {"status": "UP", "version": VERSION, "agent_id": "hello-agent", "release": release}
     @app.get("/api/capabilities", dependencies=[Depends(current_actor)])
     def capabilities():
         return {"schema_version": 1, "app_version": VERSION, "agent_id": "hello-agent", "capabilities": {
@@ -73,7 +75,7 @@ def create_app(*, planner=None, token=None, telemetry=None):
             raise HTTPException(502, "OCI model or tool execution failed") from None
         answer = (f"{data['city']}의 현재 시간은 {data['time']}입니다." if decision["tool"] == "get_time" else data["message"])
         result = {"answer": answer, "decision": decision, "tool_result": data,
-                  "trace_id": trace_id, "version": VERSION, "mode": "oci"}
+                  "trace_id": trace_id, "version": VERSION, "mode": "oci", "release": release}
         stages = [("oci.model", "generation", start, chosen, body.message, raw),
                   (decision["tool"], "tool", chosen, ended, decision["arguments"], data)]
         result["telemetry"] = export(cfg["url"], cfg["public_key"], cfg["secret_key"], trace_id,

@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "implementation": [
+        "scripts/build_hello_identity.py",
+        "examples/hello-agent/hello_release.py"
+      ],
+      "tests": [
+        {
+          "path": "scripts/test_hello_identity.py",
+          "command_plan": "specs/hello-release-identity/checks.json"
+        }
+      ]
+    },
+    {
+      "id": "REQ-002",
+      "implementation": [
+        "examples/hello-agent/hello_release.py",
+        "examples/hello-agent/hello_web.py"
+      ],
+      "tests": [
+        {
+          "path": "examples/hello-agent/test_release.py",
+          "command_plan": "specs/hello-release-identity/checks.json"
+        }
+      ]
+    },
+    {
+      "id": "REQ-003",
+      "implementation": [
+        "examples/hello-agent/hello_web.py",
+        "examples/hello-agent/hello_telemetry.py"
+      ],
+      "tests": [
+        {
+          "path": "examples/hello-agent/test_release.py",
+          "command_plan": "specs/hello-release-identity/checks.json"
+        }
+      ]
+    },
+    {
+      "id": "REQ-004",
+      "implementation": [
+        "deploy/render_hello_oke.py"
+      ],
+      "tests": [
+        {
+          "path": "scripts/test_hello_identity.py",
+          "command_plan": "specs/hello-release-identity/checks.json"
+        }
+      ]
+    }
+  ]
+}

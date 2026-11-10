@@ -9,7 +9,7 @@ requires-python = ">=3.12"
 dependencies = ["devmrko-python-foundation==0.1.2", "oci==2.188.0"]
 
 [tool.setuptools]
-py-modules = ["agent", "hello_web", "hello_telemetry"]
+py-modules = ["agent", "hello_web", "hello_telemetry", "hello_release"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "spec": "specs/hello-release-identity/spec.md",
+  "requirements": [
+    "REQ-001",
+    "REQ-002",
+    "REQ-003",
+    "REQ-004"
+  ],
+  "files": [
+    "examples/hello-agent/agent.py",
+    "examples/hello-agent/hello_web.py",
+    "examples/hello-agent/hello_telemetry.py",
+    "examples/hello-agent/hello_release.py",
+    "examples/hello-agent/pyproject.toml",
+    "examples/hello-agent/test_agent.py",
+    "examples/hello-agent/test_web.py",
+    "examples/hello-agent/test_release.py",
+    "scripts/build_hello_identity.py",
+    "scripts/test_hello_identity.py",
+    "deploy/render_hello_oke.py",
+    "deploy/tests/test_hello_oke.py",
+    "specs/hello-release-identity/design.md",
+    "specs/hello-agent/spec.md",
+    "specs/hello-agent/design.md",
+    "specs/hello-agent/tasks.md",
+    "specs/hello-agent/traceability.json",
+    "specs/hello-release-identity/tasks.md",
+    "specs/hello-release-identity/traceability.json"
+  ]
+}

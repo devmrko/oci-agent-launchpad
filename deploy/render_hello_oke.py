@@ -3,6 +3,11 @@ import argparse
 import json
 import re
 from pathlib import Path
+import importlib.util
+
+_identity_spec = importlib.util.spec_from_file_location('hello_release_contract', Path(__file__).resolve().parents[1] / 'examples/hello-agent/hello_release.py')
+_identity = importlib.util.module_from_spec(_identity_spec)
+_identity_spec.loader.exec_module(_identity)
 
 
 def render(c):
@@ -45,6 +50,10 @@ os.execvp('python',['python','-m','uvicorn','hello_web:create_app','--factory','
               {"name":"runtime","secret":{"secretName":c["runtime_secret"],"defaultMode":288,
                 "items":[{"key":k,"path":v} for k,v in {"demo-accounts.json":"accounts.json","langfuse-url":"lf-url","langfuse-public-key":"lf-public","langfuse-secret-key":"lf-secret"}.items()]}}]}}}}
     service={"apiVersion":"v1","kind":"Service","metadata":meta,"spec":{"type":"ClusterIP","selector":labels,"ports":[{"name":"http","port":8092,"targetPort":"http"}]}}
+    if 'release_identity' in c:
+        identity = _identity.validate(c['release_identity'])
+        container['env'].append({'name':'HELLO_RELEASE_IDENTITY','value':json.dumps(identity,sort_keys=True,separators=(',',':'))})
+        deployment['spec']['template']['metadata']['annotations'] = {'launchpad.dev/release-id': identity['release_id']}
     return [sa,deployment,service]
 
 if __name__ == '__main__':

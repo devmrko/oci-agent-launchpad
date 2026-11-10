@@ -13,6 +13,8 @@ def export(url, public, secret, trace_id, message, result, stages):
                  "langfuse.observation.input": json.dumps(inp, ensure_ascii=False),
                  "langfuse.observation.output": json.dumps(out, ensure_ascii=False),
                  "langfuse.observation.metadata.agent_id": "hello-agent"}
+        for key, value in (result.get("release") or {}).items():
+            attrs["langfuse.observation.metadata." + key] = value
         item = {"traceId": trace_id, "spanId": secrets.token_hex(8) if parent_id else parent,
                 "name": name, "kind": 1, "startTimeUnixNano": str(start), "endTimeUnixNano": str(end),
                 "attributes": [{"key": k, "value": {"stringValue": v}} for k,v in attrs.items()],
