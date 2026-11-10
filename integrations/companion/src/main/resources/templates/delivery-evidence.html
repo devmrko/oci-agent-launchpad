@@ -1,0 +1,10 @@
+<!DOCTYPE html><html lang="ko" xmlns:th="http://www.thymeleaf.org"><head th:replace="~{layout :: head('개발·실행 근거')}"></head><body>
+<div th:replace="~{layout :: header}"></div><main class="catalog-shell page-content app-content"><div th:replace="~{layout :: notice}"></div>
+<h1>개발·실행 근거</h1><p>요구 명세에서 검증·실행물·배포·추적까지 연결된 근거를 확인합니다. 현재 선택한 프로필·리전·구획의 항목만 표시합니다.</p>
+<p>아래 내용은 가져온 시점의 기록입니다. 이 화면은 테스트나 배포를 실행하지 않으며 실시간 운영 상태·고객 승인을 뜻하지 않습니다.</p>
+<p th:if="${entries.isEmpty()}">현재 범위에 가져온 근거가 없습니다. 리전·구획을 확인하거나 검증 결과를 등록하세요.</p>
+<section class="card" th:each="entry : ${entries}"><h2 th:text="${entry.name()}"></h2><p>가져온 시각: <span th:text="${entry.exportedAt()}"></span></p>
+<div class="table-scroll"><table class="data-table"><thead><tr><th>단계</th><th>기록 상태</th><th>근거와 다음 화면</th></tr></thead><tbody>
+<tr th:each="stage : ${entry.stages()}"><td th:text="${stage.title()}"></td><td th:text="${stage.status()}"></td><td><p th:text="${stage.detail()}"></p><p th:if="${stage.digest()!=null}">SHA-256: <code th:text="${stage.digest()}"></code></p><a th:if="${stage.url()!=null}" th:href="${stage.url()}" target="_blank" rel="noopener noreferrer" th:text="${stage.title() + ' 화면 열기'}"></a></td></tr>
+</tbody></table></div><details><summary>이 실행물의 요구 명세 원문</summary><div class="table-scroll"><pre th:text="${entry.specText()}"></pre></div></details></section>
+</main><footer th:replace="~{layout :: footer}"></footer></body></html>
